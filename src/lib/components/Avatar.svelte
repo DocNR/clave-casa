@@ -1,7 +1,7 @@
 <!-- src/lib/components/Avatar.svelte -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { themeForPubkey, gradientCss, fgForHex } from '$lib/theme';
+	import { themeForPubkey, pubkeyHueGradient } from '$lib/theme';
 	import { defaultAvatarUrl, ROBOHASH_SET_KEY } from '$lib/avatar-defaults';
 
 	type Size = 'sm' | 'md' | 'lg' | 'xl';
@@ -40,12 +40,15 @@
 	//   3. If both fail to load, fall back to the gradient + initial.
 
 	let imgFailed = $state(false);
+	// AccountTheme drives the ring color (12-entry palette, account-scoped).
 	const theme = $derived(themeForPubkey(pubkey));
+	// Pubkey-hue drives the empty-state interior gradient (~65k options,
+	// pubkey-distinct from the ring) — design-system.md §4 Treatment B.
+	const hue = $derived(pubkeyHueGradient(pubkey));
 	const dim = $derived(dimensions[size]);
 	const initial = $derived(
 		(label ?? '').trim().slice(0, 1).toUpperCase() || pubkey.slice(0, 1).toUpperCase()
 	);
-	const fg = $derived(fgForHex(theme.start));
 	// `robohashSetVersion` referenced inside the function so a set change
 	// invalidates the derived value and re-fetches with the new set.
 	const effectivePicture = $derived.by(() => {
@@ -63,10 +66,13 @@
 </script>
 
 {#if showImage}
+	<!-- bg-white is the iOS Treatment-A "opaque backing" (design-system.md §4).
+	     Required so transparent-PFP images (robohash, some kind:0 avatars) don't
+	     let the gradient ring bleed through the silhouette. Don't remove. -->
 	<img
 		src={effectivePicture}
 		alt=""
-		class="inline-block shrink-0 select-none rounded-full bg-white object-cover dark:bg-neutral-900"
+		class="inline-block shrink-0 select-none rounded-full bg-white object-cover"
 		style:width="{dim.px}px"
 		style:height="{dim.px}px"
 		style:border="{dim.ring}px solid {theme.accent}"
@@ -79,10 +85,10 @@
 		class="inline-flex shrink-0 select-none items-center justify-center rounded-full font-semibold"
 		style:width="{dim.px}px"
 		style:height="{dim.px}px"
-		style:background={gradientCss(theme)}
+		style:background={hue.css}
 		style:border="{dim.ring}px solid {theme.accent}"
 		style:font-size={dim.font}
-		style:color={fg}
+		style:color={hue.fg}
 		aria-hidden="true"
 	>
 		{initial}
