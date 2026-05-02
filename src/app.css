@@ -2,8 +2,46 @@
 
 :root {
 	color-scheme: light dark;
+
+	/* Default tint — overridden at runtime when an account becomes active.
+	   See +layout.svelte's $effect that watches active connection. */
+	--clave-tint: #1a73d9;
+	--clave-tint-fg: #ffffff;
+
+	/* Surface tokens for cards / inputs / borders. Light + dark adapt below. */
+	--clave-surface: rgb(245 245 245 / 0.6);
+	--clave-surface-alt: rgb(255 255 255);
+	--clave-border: rgb(0 0 0 / 0.08);
+	--clave-text-muted: rgb(115 115 115);
+
+	/* Radii. Match iOS 16pt cards / 12pt inputs. */
+	--clave-radius-card: 16px;
+	--clave-radius-input: 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--clave-surface: rgb(23 23 23 / 0.5);
+		--clave-surface-alt: rgb(10 10 10);
+		--clave-border: rgb(255 255 255 / 0.08);
+		--clave-text-muted: rgb(163 163 163);
+	}
 }
 
 html {
-	font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+	/* System stack — macOS / iOS Safari render this as SF Pro Text, matching
+	   the Clave iOS app body copy. Other platforms get their native UI font. */
+	font-family:
+		-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable Text',
+		'Segoe UI', system-ui, sans-serif;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+/* Slightly tighten heading letter-spacing to match Clave iOS's SF Pro
+   Display rhythm. */
+h1,
+h2,
+h3 {
+	letter-spacing: -0.01em;
 }
