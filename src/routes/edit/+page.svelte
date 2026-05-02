@@ -22,6 +22,7 @@
 	import RelayList from '$lib/components/RelayList.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import FormSectionCard from '$lib/components/FormSectionCard.svelte';
+	import { copyToClipboard } from '$lib/clipboard';
 
 	// Kind 0 metadata fields per NIP-01 (name, about, picture) +
 	// NIP-24 (display_name, website, banner, bot) + NIP-05 (nip05) +
@@ -301,14 +302,14 @@
 
 	async function copyNpub() {
 		if (!npub) return;
-		try {
-			await navigator.clipboard.writeText(npub);
-			npubCopied = true;
-			if (npubCopyTimer) clearTimeout(npubCopyTimer);
-			npubCopyTimer = setTimeout(() => (npubCopied = false), 1600);
-		} catch (e) {
-			console.warn('[clave.casa] clipboard write failed:', e);
+		const ok = await copyToClipboard(npub);
+		if (!ok) {
+			console.warn('[clave.casa] clipboard write failed');
+			return;
 		}
+		npubCopied = true;
+		if (npubCopyTimer) clearTimeout(npubCopyTimer);
+		npubCopyTimer = setTimeout(() => (npubCopied = false), 1600);
 	}
 </script>
 

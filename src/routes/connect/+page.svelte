@@ -10,6 +10,7 @@
 		type ConnectStage
 	} from '$lib/signer';
 	import StatusPill from '$lib/components/StatusPill.svelte';
+	import { copyToClipboard } from '$lib/clipboard';
 
 	type Tab = 'qr' | 'paste';
 
@@ -177,14 +178,14 @@
 
 	async function copyNcUri() {
 		if (!ncUri) return;
-		try {
-			await navigator.clipboard.writeText(ncUri);
-			ncCopied = true;
-			if (ncCopyTimer) clearTimeout(ncCopyTimer);
-			ncCopyTimer = setTimeout(() => (ncCopied = false), 1600);
-		} catch (e) {
-			console.warn('[clave.casa] clipboard write failed:', e);
+		const ok = await copyToClipboard(ncUri);
+		if (!ok) {
+			console.warn('[clave.casa] clipboard write failed');
+			return;
 		}
+		ncCopied = true;
+		if (ncCopyTimer) clearTimeout(ncCopyTimer);
+		ncCopyTimer = setTimeout(() => (ncCopied = false), 1600);
 	}
 
 	const stageLabel = $derived(
