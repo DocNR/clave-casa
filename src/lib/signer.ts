@@ -11,13 +11,19 @@
 
 import { SimplePool } from 'nostr-tools/pool';
 import { BunkerSigner, parseBunkerInput, type BunkerPointer } from 'nostr-tools/nip46';
-import { generateSecretKey, getPublicKey } from 'nostr-tools/pure';
+import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import { bytesToHex, hexToBytes } from 'nostr-tools/utils';
+import * as nip04 from 'nostr-tools/nip04';
+import * as nip44 from 'nostr-tools/nip44';
+import type { Event, EventTemplate, VerifiedEvent } from 'nostr-tools/core';
+import type { Filter } from 'nostr-tools/filter';
 
 let pool: SimplePool | undefined;
 let activeSigner: BunkerSigner | undefined;
 let activeUserPubkey: string | undefined;
 let activeBunkerRelays: string[] = [];
+let activeBp: BunkerPointer | undefined;
+let activeLocalKey: Uint8Array | undefined;
 
 export function getPool(): SimplePool {
 	if (!pool) pool = new SimplePool();
@@ -146,6 +152,8 @@ export async function connectSigner(
 	activeSigner = signer;
 	activeUserPubkey = userPubkey;
 	activeBunkerRelays = [...bp.relays];
+	activeBp = bp;
+	activeLocalKey = localKey;
 	return { signer, userPubkey, bp };
 }
 
@@ -201,6 +209,168 @@ export async function signWithApprovalWait<T>(
 	);
 }
 
+// signEventViaBunker — kind 24133 sign_event RPC that handles Clave's
+// two-stage response pattern. Sends one request, subscribes to ALL responses
+// on the same request ID, loops past intermediate "permission_denied"/queued
+// responses, and resolves only when a signed event arrives.
+//
+// Why we don't use BunkerSigner.signEvent: nostr-tools' RPC resolves on the
+// FIRST response with a matching request ID and removes the listener. When
+// Clave returns "Permission denied — open Clave to approve" first and the
+// signed event later (after user taps Approve), the second response is
+// dropped. Our subscription stays alive until success or timeout.
+
+export type ApprovalProgressCallback = (info: {
+	stage: 'sent' | 'pending' | 'signed';
+	startedAt: number;
+}) => void;
+
+export async function signEventViaBunker(
+	template: EventTemplate,
+	opts: {
+		timeoutMs?: number;
+		onProgress?: ApprovalProgressCallback;
+	} = {}
+): Promise<VerifiedEvent> {
+	const active = getActiveSigner();
+	if (!active) throw new Error('No active signer');
+	const bp = activeBp;
+	if (!bp) throw new Error('Active signer has no bunker pointer');
+	const localKey = activeLocalKey;
+	if (!localKey) throw new Error('Active signer has no local key');
+
+	const timeoutMs = opts.timeoutMs ?? 120_000;
+	const startedAt = Date.now();
+	const requestId = generateRequestId();
+	const localPubkey = getPublicKey(localKey);
+
+	const requestPayload = JSON.stringify({
+		id: requestId,
+		method: 'sign_event',
+		params: [JSON.stringify(template)]
+	});
+
+	// Encrypt with the same scheme the active signer is using. We track this
+	// on the signer module — most modern bunkers use NIP-44; Clave auto-detects
+	// based on the request encryption.
+	const encrypted = nip44.v2.encrypt(
+		requestPayload,
+		nip44.v2.utils.getConversationKey(localKey, bp.pubkey)
+	);
+
+	const requestEvent: VerifiedEvent = finalizeEvent(
+		{
+			kind: 24133,
+			content: encrypted,
+			tags: [['p', bp.pubkey]],
+			created_at: Math.floor(Date.now() / 1000)
+		},
+		localKey
+	);
+
+	const pool = getPool();
+
+	return new Promise<VerifiedEvent>((resolve, reject) => {
+		let settled = false;
+		const settle = (fn: () => void) => {
+			if (settled) return;
+			settled = true;
+			clearTimeout(timer);
+			sub.close();
+			fn();
+		};
+
+		const timer = setTimeout(() => {
+			settle(() =>
+				reject(
+					new Error(
+						`Timed out after ${Math.round(timeoutMs / 1000)}s waiting for signer response. ` +
+							`If you see an approval prompt in Clave, tap Approve or Always allow.`
+					)
+				)
+			);
+		}, timeoutMs);
+
+		const filter: Filter = {
+			kinds: [24133],
+			'#p': [localPubkey],
+			since: requestEvent.created_at - 5
+		};
+
+		const sub = pool.subscribeMany(bp.relays, filter, {
+			onevent: async (event: Event) => {
+				if (event.pubkey !== bp.pubkey) return;
+				let plaintext: string;
+				try {
+					plaintext = await tryDecrypt(event.content, localKey, bp.pubkey);
+				} catch {
+					return; // can't decrypt — not for us
+				}
+				let parsed: { id?: string; result?: string; error?: string };
+				try {
+					parsed = JSON.parse(plaintext);
+				} catch {
+					return;
+				}
+				if (parsed.id !== requestId) return;
+
+				// Permission-denied / queued / auth-url: keep listening
+				if (parsed.error || parsed.result === 'auth_url' || !parsed.result) {
+					if (parsed.error) {
+						console.debug('[clave.casa] sign_event intermediate response:', parsed.error);
+						opts.onProgress?.({ stage: 'pending', startedAt });
+					}
+					return;
+				}
+
+				// Success — parse signed event
+				let signed: VerifiedEvent;
+				try {
+					signed = JSON.parse(parsed.result) as VerifiedEvent;
+				} catch (e) {
+					settle(() => reject(new Error(`Bunker returned malformed result: ${e}`)));
+					return;
+				}
+				opts.onProgress?.({ stage: 'signed', startedAt });
+				settle(() => resolve(signed));
+			},
+			onclose: () => {
+				if (!settled) {
+					settle(() => reject(new Error('Subscription closed before signer responded')));
+				}
+			}
+		});
+
+		opts.onProgress?.({ stage: 'sent', startedAt });
+		// Publish the request — fire and forget, the response arrives on the subscription
+		Promise.allSettled(pool.publish(bp.relays, requestEvent)).catch(() => {
+			// Errors here surface via timeout if no response arrives
+		});
+	});
+}
+
+// Try NIP-44 first, then fall back to NIP-04. Mirrors Clave's auto-detect.
+async function tryDecrypt(
+	ciphertext: string,
+	privateKey: Uint8Array,
+	otherPubkey: string
+): Promise<string> {
+	// NIP-04 envelopes contain "?iv=" — use that as a sniff
+	if (ciphertext.includes('?iv=')) {
+		return await nip04.decrypt(privateKey, otherPubkey, ciphertext);
+	}
+	const conversationKey = nip44.v2.utils.getConversationKey(privateKey, otherPubkey);
+	return nip44.v2.decrypt(ciphertext, conversationKey);
+}
+
+function generateRequestId(): string {
+	const bytes = new Uint8Array(8);
+	crypto.getRandomValues(bytes);
+	return Array.from(bytes)
+		.map((b) => b.toString(16).padStart(2, '0'))
+		.join('');
+}
+
 export async function disconnectActiveSigner() {
 	if (activeSigner) {
 		try {
@@ -212,6 +382,8 @@ export async function disconnectActiveSigner() {
 	activeSigner = undefined;
 	activeUserPubkey = undefined;
 	activeBunkerRelays = [];
+	activeBp = undefined;
+	activeLocalKey = undefined;
 }
 
 // Per-bunker-pubkey local NIP-46 keypair. The local signer is the ephemeral

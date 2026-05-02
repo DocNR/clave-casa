@@ -8,7 +8,7 @@
 		upsertConnection,
 		type Connection
 	} from '$lib/connections';
-	import { connectSigner, getActiveSigner, signWithApprovalWait } from '$lib/signer';
+	import { connectSigner, getActiveSigner, signEventViaBunker } from '$lib/signer';
 	import {
 		publishThreeTier,
 		scanAndRebroadcast,
@@ -143,27 +143,23 @@
 
 		const content = JSON.stringify({ ...extraFields, ...stripEmpty(fields) });
 		try {
-			const signed = await signWithApprovalWait(
-				() =>
-					active.signer.signEvent({
-						kind: 0,
-						content,
-						tags: [],
-						created_at: Math.floor(Date.now() / 1000)
-					}),
+			const signed = await signEventViaBunker(
 				{
-					retryDelayMs: 30_000,
-					onWait: (attempt) => {
-						if (!approvalWait) {
-							approvalWait = { attempt, startedAt: Date.now() };
+					kind: 0,
+					content,
+					tags: [],
+					created_at: Math.floor(Date.now() / 1000)
+				},
+				{
+					onProgress: ({ stage, startedAt }) => {
+						if (stage === 'pending' && !approvalWait) {
+							approvalWait = { attempt: 1, startedAt };
 							approvalElapsedSec = 0;
 							approvalTickInterval = setInterval(() => {
 								if (approvalWait) {
 									approvalElapsedSec = Math.round((Date.now() - approvalWait.startedAt) / 1000);
 								}
 							}, 1000);
-						} else {
-							approvalWait = { ...approvalWait, attempt };
 						}
 					}
 				}
@@ -266,9 +262,8 @@
 				<div class="flex-1">
 					<p class="font-medium">Awaiting approval on your Clave app…</p>
 					<p class="mt-1 text-xs">
-						Open Clave and tap <strong>Always allow</strong> on the request so future edits
-						don't need approval each time. Elapsed {approvalElapsedSec}s · attempt {approvalWait.attempt}
-						· auto-retry every 30s.
+						Open Clave and tap <strong>Approve</strong> (or <strong>Always allow</strong> to skip
+						future prompts for kind 0 edits). Waiting {approvalElapsedSec}s.
 					</p>
 				</div>
 			</div>
