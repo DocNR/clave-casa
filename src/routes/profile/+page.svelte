@@ -54,7 +54,9 @@
 	let publishReport = $state<PublishReport | undefined>(undefined);
 	let scanReport = $state<ScanReport | undefined>(undefined);
 	let lastSavedEvent = $state<VerifiedEvent | undefined>(undefined);
-	let approvalWait = $state<{ attempt: number; elapsedSec: number } | undefined>(undefined);
+	let approvalWait = $state<{ attempt: number; startedAt: number } | undefined>(undefined);
+	let approvalElapsedSec = $state(0);
+	let approvalTickInterval: ReturnType<typeof setInterval> | undefined;
 
 	onMount(async () => {
 		conn = getActiveConnection();
@@ -125,7 +127,7 @@
 		phase = 'publishing';
 		publishReport = undefined;
 		scanReport = undefined;
-		approvalWait = undefined;
+		clearApprovalTick();
 		loadError = '';
 
 		const content = JSON.stringify({ ...extraFields, ...stripEmpty(fields) });
@@ -139,16 +141,27 @@
 						created_at: Math.floor(Date.now() / 1000)
 					}),
 				{
-					onWait: (attempt, elapsedMs) => {
-						approvalWait = { attempt, elapsedSec: Math.round(elapsedMs / 1000) };
+					retryDelayMs: 30_000,
+					onWait: (attempt) => {
+						if (!approvalWait) {
+							approvalWait = { attempt, startedAt: Date.now() };
+							approvalElapsedSec = 0;
+							approvalTickInterval = setInterval(() => {
+								if (approvalWait) {
+									approvalElapsedSec = Math.round((Date.now() - approvalWait.startedAt) / 1000);
+								}
+							}, 1000);
+						} else {
+							approvalWait = { ...approvalWait, attempt };
+						}
 					}
 				}
 			);
-			approvalWait = undefined;
+			clearApprovalTick();
 			lastSavedEvent = signed;
 			publishReport = await publishThreeTier(signed, userPubkey);
 		} catch (e) {
-			approvalWait = undefined;
+			clearApprovalTick();
 			loadError = e instanceof Error ? e.message : String(e);
 		} finally {
 			phase = 'editing';
@@ -175,6 +188,15 @@
 			}
 		}
 		return out;
+	}
+
+	function clearApprovalTick() {
+		approvalWait = undefined;
+		approvalElapsedSec = 0;
+		if (approvalTickInterval) {
+			clearInterval(approvalTickInterval);
+			approvalTickInterval = undefined;
+		}
 	}
 
 	const totalRelaysOk = $derived(
@@ -230,8 +252,9 @@
 				<div class="flex-1">
 					<p class="font-medium">Awaiting approval on your Clave app…</p>
 					<p class="mt-1 text-xs">
-						Open Clave and tap to approve. We'll auto-retry every 8s — elapsed {approvalWait.elapsedSec}s
-						(attempt {approvalWait.attempt}).
+						Open Clave and tap <strong>Always allow</strong> on the request so future edits
+						don't need approval each time. Elapsed {approvalElapsedSec}s · attempt {approvalWait.attempt}
+						· auto-retry every 30s.
 					</p>
 				</div>
 			</div>
@@ -282,7 +305,7 @@
 				>
 					{phase === 'publishing'
 						? approvalWait
-							? `Awaiting approval… (${approvalWait.elapsedSec}s)`
+							? `Awaiting approval… (${approvalElapsedSec}s)`
 							: 'Publishing…'
 						: 'Save & publish'}
 				</button>
