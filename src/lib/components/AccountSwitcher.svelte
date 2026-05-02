@@ -72,6 +72,13 @@
 		open = false;
 		confirmingSignOut = undefined;
 		window.dispatchEvent(new StorageEvent('storage', { key: 'clave-casa.activeAccount.v1' }));
+		// Tapping an account in the picker should also take you to that
+		// account's edit view. If you were on /connect adding a new account
+		// and bail back to an existing one via the picker, this gets you
+		// out of the bunker-input page.
+		if (page.url?.pathname !== '/edit') {
+			goto('/edit');
+		}
 	}
 
 	async function signOut(pubkey: string) {
