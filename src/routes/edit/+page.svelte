@@ -120,52 +120,62 @@
 	async function loadProfile() {
 		nip65Present = await hasNip65(userPubkey);
 		const event = await fetchLatestProfile(userPubkey);
-		if (!event) return;
-		try {
-			const parsed = JSON.parse(event.content) as Record<string, unknown>;
-			const stringKeys = new Set<keyof ProfileFields>([
-				'name',
-				'display_name',
-				'picture',
-				'banner',
-				'about',
-				'nip05',
-				'lud16',
-				'website'
-			]);
-			const next = { ...empty };
-			const extras: Record<string, unknown> = {};
-			for (const [k, v] of Object.entries(parsed)) {
-				// Migrate deprecated aliases (NIP-24) into canonical names. Only
-				// adopt if the canonical key isn't already set in this kind 0.
-				if (k in DEPRECATED_ALIASES && typeof v === 'string') {
-					const canonical = DEPRECATED_ALIASES[k];
-					if (!next[canonical]) (next as Record<string, unknown>)[canonical] = v;
-					continue;
+		if (event) {
+			try {
+				const parsed = JSON.parse(event.content) as Record<string, unknown>;
+				const stringKeys = new Set<keyof ProfileFields>([
+					'name',
+					'display_name',
+					'picture',
+					'banner',
+					'about',
+					'nip05',
+					'lud16',
+					'website'
+				]);
+				const next = { ...empty };
+				const extras: Record<string, unknown> = {};
+				for (const [k, v] of Object.entries(parsed)) {
+					// Migrate deprecated aliases (NIP-24) into canonical names. Only
+					// adopt if the canonical key isn't already set in this kind 0.
+					if (k in DEPRECATED_ALIASES && typeof v === 'string') {
+						const canonical = DEPRECATED_ALIASES[k];
+						if (!next[canonical]) (next as Record<string, unknown>)[canonical] = v;
+						continue;
+					}
+					if (stringKeys.has(k as keyof ProfileFields) && typeof v === 'string') {
+						(next as Record<string, unknown>)[k] = v;
+					} else if (k === 'bot' && typeof v === 'boolean') {
+						next.bot = v;
+					} else {
+						extras[k] = v;
+					}
 				}
-				if (stringKeys.has(k as keyof ProfileFields) && typeof v === 'string') {
-					(next as Record<string, unknown>)[k] = v;
-				} else if (k === 'bot' && typeof v === 'boolean') {
-					next.bot = v;
-				} else {
-					extras[k] = v;
+				fields = next;
+				extraFields = extras;
+				if (conn && (next.display_name || next.name || next.picture)) {
+					const updated = {
+						...conn,
+						label: next.display_name || next.name || conn.label,
+						pictureUrl: next.picture || conn.pictureUrl
+					};
+					upsertConnection(updated);
+					conn = updated;
+					// Notify other listeners (AccountSwitcher) that the connection changed
+					window.dispatchEvent(new StorageEvent('storage', { key: 'clave-casa.connections.v1' }));
 				}
+			} catch {
+				// content wasn't JSON; ignore
 			}
-			fields = next;
-			extraFields = extras;
-			if (conn && (next.display_name || next.name || next.picture)) {
-				const updated = {
-					...conn,
-					label: next.display_name || next.name || conn.label,
-					pictureUrl: next.picture || conn.pictureUrl
-				};
-				upsertConnection(updated);
-				conn = updated;
-				// Notify other listeners (AccountSwitcher) that the connection changed
-				window.dispatchEvent(new StorageEvent('storage', { key: 'clave-casa.connections.v1' }));
-			}
-		} catch {
-			// content wasn't JSON; ignore
+		}
+
+		// If after loading (or in the absence of an existing kind 0) the
+		// picture field is still empty, prefill it with the per-account
+		// Robohash URL so the user can SEE what will be published. save()
+		// also defaults this on publish, but pre-filling makes it visible
+		// without forcing a save round-trip first.
+		if (!fields.picture) {
+			fields.picture = defaultAvatarUrl(userPubkey);
 		}
 	}
 
