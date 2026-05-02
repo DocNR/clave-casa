@@ -121,12 +121,15 @@ export async function publishThreeTier(
 	return { tier1, tier2 };
 }
 
-// Stale-relay scan. Queries SCAN_SET for the latest kind 0 by author,
-// compares to `freshest`, and rebroadcasts to any relay returning older
-// or no event.
+// Stale-relay scan. Queries SCAN_SET *plus* the user's own NIP-65 write
+// relays *plus* any caller-provided extras (typically: relays that failed
+// during the most recent Save & publish — Sync acts as the safety net for
+// partial publish failures). Compares each relay's latest kind 0 to
+// `freshest` and rebroadcasts where stale or missing.
 export async function scanAndRebroadcast(
 	freshest: VerifiedEvent,
-	userPubkey: string
+	userPubkey: string,
+	extraRelays: string[] = []
 ): Promise<ScanReport> {
 	const report: ScanReport = {
 		updated: [],
@@ -137,7 +140,13 @@ export async function scanAndRebroadcast(
 	};
 	const pool = getPool();
 
-	const tasks = SCAN_SET.map(async (url) => {
+	// Always retry the user's declared write relays — without this, partial
+	// failures from publishThreeTier wouldn't be picked up by Sync unless
+	// the failing relay happened to also be in SCAN_SET.
+	const writeRelays = await getWriteRelays(userPubkey);
+	const targets = Array.from(new Set([...SCAN_SET, ...writeRelays, ...extraRelays]));
+
+	const tasks = targets.map(async (url) => {
 		try {
 			const filter: Filter = { kinds: [METADATA_KIND], authors: [userPubkey], limit: 1 };
 			const found = await Promise.race([

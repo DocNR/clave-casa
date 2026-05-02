@@ -224,6 +224,21 @@
 			clearApprovalTick();
 			lastSavedEvent = signed;
 			publishReport = await publishThreeTier(signed, userPubkey);
+
+			// Update Connection metadata so the AccountSwitcher and other
+			// surfaces pick up the new label/PFP without needing a refresh.
+			if (conn) {
+				const newLabel = fields.display_name || fields.name || conn.label;
+				const newPicture = fields.picture || conn.pictureUrl;
+				if (newLabel !== conn.label || newPicture !== conn.pictureUrl) {
+					const updated = { ...conn, label: newLabel, pictureUrl: newPicture };
+					upsertConnection(updated);
+					conn = updated;
+					window.dispatchEvent(
+						new StorageEvent('storage', { key: 'clave-casa.connections.v1' })
+					);
+				}
+			}
 		} catch (e) {
 			clearApprovalTick();
 			loadError = e instanceof Error ? e.message : String(e);
@@ -236,7 +251,16 @@
 		if (!lastSavedEvent || phase !== 'editing') return;
 		phase = 'syncing';
 		try {
-			scanReport = await scanAndRebroadcast(lastSavedEvent, userPubkey);
+			// Pass any relays that failed during the last publish so Sync
+			// retries them — without this, partial-failure relays only get
+			// retried if they happen to be in SCAN_SET coincidentally.
+			const failedRelays = [
+				...(publishReport?.tier1 ?? []),
+				...(publishReport?.tier2 ?? [])
+			]
+				.filter((r) => !r.ok)
+				.map((r) => r.url);
+			scanReport = await scanAndRebroadcast(lastSavedEvent, userPubkey, failedRelays);
 		} catch (e) {
 			loadError = e instanceof Error ? e.message : String(e);
 		} finally {
