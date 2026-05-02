@@ -66,6 +66,39 @@ export function gradientCss(theme: AccountTheme): string {
 	return `linear-gradient(135deg, ${theme.start}, ${theme.end})`;
 }
 
+export type PubkeyHueGradient = {
+	/** CSS linear-gradient string (135° to match avatar gradient direction). */
+	css: string;
+	/** Foreground color (white) for text overlaid on this gradient. */
+	fg: string;
+};
+
+// Generate a deterministic gradient from a pubkey for empty-avatar fallback.
+// Mirrors Clave iOS AvatarView (design-system.md §2 "Pubkey-hue derivation").
+// ~65k unique combinations from the first 12 hex chars, distinct from the
+// 12-entry AccountTheme palette so the avatar interior reads differently
+// from the ring around it.
+//
+// iOS uses HSB(brightness 0.9 / 0.7); CSS uses HSL(lightness). The
+// approximation HSB(B=0.9, S=0.7) ≈ HSL(L=60%, S=70%) and HSB(B=0.7, S=0.6)
+// ≈ HSL(L=45%, S=60%) reads as the same hue family across both color spaces
+// (won't be pixel-identical to iOS but the perceptual hue matches).
+export function pubkeyHueGradient(hexPubkey: string): PubkeyHueGradient {
+	const normalized = hexPubkey.toLowerCase();
+	if (!/^[0-9a-f]{12,}$/.test(normalized)) {
+		// Fallback for malformed pubkey — neutral grey gradient.
+		return { css: 'linear-gradient(135deg, #999, #666)', fg: '#ffffff' };
+	}
+	const hue1 = parseInt(normalized.slice(0, 2), 16) / 255;
+	const hue2 = parseInt(normalized.slice(8, 10), 16) / 255;
+	const c1 = `hsl(${(hue1 * 360).toFixed(0)} 70% 60%)`;
+	const c2 = `hsl(${(hue2 * 360).toFixed(0)} 60% 45%)`;
+	return {
+		css: `linear-gradient(135deg, ${c1}, ${c2})`,
+		fg: '#ffffff'
+	};
+}
+
 // Convert a #RRGGBB hex to an `rgb(r g b / alpha)` string for translucent
 // surfaces. Alpha is 0..1.
 export function hexToRgba(hex: string, alpha: number): string {
@@ -78,14 +111,22 @@ export function hexToRgba(hex: string, alpha: number): string {
 }
 
 // Build the page-background ambient gradient CSS for the active account.
-// 135° matches the avatar gradient direction. Alphas tuned to give the
-// Primal-style ambient wash — clearly the account's color, not a hint.
-// Light mode blends saturated palette stops with the near-white wrapper
-// to produce pastels (e.g., Sky #4AA3FF at 0.55 over neutral-50 yields
-// a clear lavender-blue). Dark mode pulls back so near-black surfaces
-// don't get muddied.
+// Matches Clave iOS HomeView ambient gradient (design-system.md §6) —
+// top → bottom progressive fade with four alpha stops carries the account
+// color into the upper half of the screen and dies off at the bottom for
+// legibility against form content.
+//
+// Stops at 0%/35%/70%/100% with alphas 0.38/0.26/0.12/0.06 (light mode)
+// alternating start → end → end → start. Dark mode is currently unused
+// (Tailwind 4 `@variant dark` set up but never applied) — values tuned
+// for parity if dark mode is ever re-enabled.
 export function ambientGradientCss(theme: AccountTheme, scheme: 'light' | 'dark'): string {
-	const startAlpha = scheme === 'light' ? 0.6 : 0.38;
-	const endAlpha = scheme === 'light' ? 0.42 : 0.24;
-	return `linear-gradient(135deg, ${hexToRgba(theme.start, startAlpha)}, ${hexToRgba(theme.end, endAlpha)})`;
+	const a = scheme === 'light' ? [0.38, 0.26, 0.12, 0.06] : [0.3, 0.2, 0.1, 0.05];
+	return [
+		`linear-gradient(to bottom,`,
+		`${hexToRgba(theme.start, a[0])} 0%,`,
+		`${hexToRgba(theme.end, a[1])} 35%,`,
+		`${hexToRgba(theme.end, a[2])} 70%,`,
+		`${hexToRgba(theme.start, a[3])} 100%)`
+	].join(' ');
 }
