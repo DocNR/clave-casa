@@ -19,6 +19,8 @@
 	import Field from '$lib/components/Field.svelte';
 	import TextareaField from '$lib/components/TextareaField.svelte';
 	import RelayList from '$lib/components/RelayList.svelte';
+	import Avatar from '$lib/components/Avatar.svelte';
+	import FormSectionCard from '$lib/components/FormSectionCard.svelte';
 
 	type ProfileFields = {
 		name: string;
@@ -188,14 +190,21 @@
 	<p class="py-12 text-center text-sm text-neutral-500">Loading your profile…</p>
 {:else}
 	<div class="space-y-6">
-		<header class="flex items-baseline justify-between">
-			<h1 class="text-2xl font-semibold">Edit profile</h1>
-			<span class="font-mono text-xs text-neutral-500">{userPubkey.slice(0, 12)}…</span>
+		<header class="flex items-center gap-3">
+			<Avatar pubkey={userPubkey} size="lg" label={fields.display_name || fields.name} />
+			<div class="min-w-0 flex-1">
+				<h1 class="truncate text-2xl font-semibold">
+					{fields.display_name || fields.name || 'Edit profile'}
+				</h1>
+				<p class="truncate font-mono text-xs text-[var(--clave-text-muted)]">
+					{userPubkey.slice(0, 16)}…
+				</p>
+			</div>
 		</header>
 
 		{#if loadError}
 			<div
-				class="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100"
+				class="rounded-2xl border border-red-300 bg-red-50 p-3 text-sm text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100"
 			>
 				{loadError}
 			</div>
@@ -203,7 +212,7 @@
 
 		{#if !nip65Present}
 			<div
-				class="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100"
+				class="rounded-2xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100"
 			>
 				<p class="font-medium">No relay list (NIP-65) found.</p>
 				<p class="mt-1">
@@ -215,7 +224,7 @@
 
 		{#if approvalWait}
 			<div
-				class="flex items-start gap-3 rounded-md border border-blue-300 bg-blue-50 p-3 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-100"
+				class="flex items-start gap-3 rounded-2xl border border-blue-300 bg-blue-50 p-3 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-100"
 			>
 				<span class="mt-0.5 inline-block h-2 w-2 animate-pulse rounded-full bg-blue-500"></span>
 				<div class="flex-1">
@@ -235,20 +244,41 @@
 			}}
 			class="space-y-4"
 		>
-			<Field label="Display name" placeholder="Your name as shown to readers" bind:value={fields.display_name} />
-			<Field label="Username" placeholder="lowercase, no spaces" bind:value={fields.name} />
-			<Field label="Picture URL" placeholder="https://…" bind:value={fields.picture} type="url" />
-			<Field label="Banner URL" placeholder="https://… (wider image, header)" bind:value={fields.banner} type="url" />
-			<TextareaField label="About" placeholder="A short bio…" bind:value={fields.about} />
-			<Field label="NIP-05 verifier" placeholder="you@example.com" bind:value={fields.nip05} />
-			<Field label="Lightning address (lud16)" placeholder="you@walletofsatoshi.com" bind:value={fields.lud16} />
-			<Field label="Website" placeholder="https://…" bind:value={fields.website} type="url" />
+			<FormSectionCard label="Identity">
+				<Field
+					label="Display name"
+					placeholder="Your name as shown to readers"
+					bind:value={fields.display_name}
+				/>
+				<Field label="Username" placeholder="lowercase, no spaces" bind:value={fields.name} />
+				<TextareaField label="About" placeholder="A short bio…" bind:value={fields.about} />
+			</FormSectionCard>
+
+			<FormSectionCard label="Images">
+				<Field label="Picture URL" placeholder="https://…" bind:value={fields.picture} type="url" />
+				<Field
+					label="Banner URL"
+					placeholder="https://… (wider image, header)"
+					bind:value={fields.banner}
+					type="url"
+				/>
+			</FormSectionCard>
+
+			<FormSectionCard label="Verification & links">
+				<Field label="NIP-05 verifier" placeholder="you@example.com" bind:value={fields.nip05} />
+				<Field
+					label="Lightning address (lud16)"
+					placeholder="you@walletofsatoshi.com"
+					bind:value={fields.lud16}
+				/>
+				<Field label="Website" placeholder="https://…" bind:value={fields.website} type="url" />
+			</FormSectionCard>
 
 			<div class="flex items-center gap-3 pt-2">
 				<button
 					type="submit"
 					disabled={phase === 'publishing'}
-					class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+					class="rounded-xl bg-[var(--clave-tint)] px-4 py-2.5 text-sm font-semibold text-[var(--clave-tint-fg)] hover:opacity-90 disabled:opacity-50"
 				>
 					{phase === 'publishing'
 						? approvalWait
@@ -261,7 +291,7 @@
 						type="button"
 						onclick={syncAcrossNostr}
 						disabled={phase === 'syncing'}
-						class="rounded-md border border-neutral-300 bg-white px-4 py-2 text-sm font-medium hover:bg-neutral-50 disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:bg-neutral-800"
+						class="rounded-xl border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] px-4 py-2.5 text-sm font-semibold hover:bg-[var(--clave-surface)] disabled:opacity-50"
 					>
 						{phase === 'syncing' ? 'Syncing…' : 'Sync across Nostr'}
 					</button>
@@ -271,7 +301,7 @@
 
 		{#if publishReport}
 			<section
-				class="rounded-md border border-neutral-200 bg-white p-4 text-sm dark:border-neutral-800 dark:bg-neutral-900"
+				class="rounded-2xl border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] p-4 text-sm"
 			>
 				<p class="font-medium">Published to {totalRelaysOk}/{totalRelays} relays</p>
 				<RelayList title="Your write relays" results={publishReport.tier1} />
@@ -281,7 +311,7 @@
 
 		{#if scanReport}
 			<section
-				class="rounded-md border border-neutral-200 bg-white p-4 text-sm dark:border-neutral-800 dark:bg-neutral-900"
+				class="rounded-2xl border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] p-4 text-sm"
 			>
 				<p class="font-medium">
 					Updated {scanReport.updated.length} · Synced {scanReport.synced.length} · Older {scanReport.older.length} · Missing {scanReport.missing.length} · Offline {scanReport.offline.length}
