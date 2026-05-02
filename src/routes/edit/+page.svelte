@@ -23,6 +23,7 @@
 	import Avatar from '$lib/components/Avatar.svelte';
 	import FormSectionCard from '$lib/components/FormSectionCard.svelte';
 	import { copyToClipboard } from '$lib/clipboard';
+	import { displayLabel } from '$lib/labels';
 	import {
 		defaultAvatarUrl,
 		getRobohashSet,
@@ -91,6 +92,24 @@
 	// Track which account we've loaded so storage events that don't actually
 	// change the active account don't trigger pointless reloads.
 	let loadedPubkey: string | undefined = undefined;
+
+	// Resolved label for the page header + Avatar initial. Mirrors the iOS
+	// displayLabel chain (design-system.md §7) — petname → kind 0 → npub.
+	// `fields` is the live form state, so the heading reflects what the user
+	// is editing (display_name updates as they type).
+	const resolvedLabel = $derived(
+		displayLabel({
+			connection: conn,
+			profile: { display_name: fields.display_name, name: fields.name },
+			pubkeyHex: userPubkey
+		})
+	);
+	// Heading override: when displayLabel falls all the way through to the
+	// npub-prefix, show the friendlier page-context "Edit profile" instead.
+	// Any meaningful label (petname, display_name, name) renders as-is.
+	const headingLabel = $derived(
+		resolvedLabel.startsWith('npub') ? 'Edit profile' : resolvedLabel
+	);
 
 	async function loadForActiveAccount() {
 		const newConn = getActiveConnection();
@@ -403,7 +422,7 @@
 				<Avatar
 					pubkey={userPubkey}
 					size="xl"
-					label={fields.display_name || fields.name}
+					label={resolvedLabel}
 					picture={fields.picture}
 				/>
 				<button
@@ -427,7 +446,7 @@
 			</div>
 			<div class="min-w-0 flex-1">
 				<h1 class="truncate text-3xl font-semibold">
-					{fields.display_name || fields.name || 'Edit profile'}
+					{headingLabel}
 				</h1>
 				<button
 					type="button"
@@ -643,7 +662,7 @@
 			<Avatar
 				pubkey={userPubkey}
 				size="lg"
-				label={fields.display_name || fields.name}
+				label={resolvedLabel}
 				picture={editingPictureUrl}
 			/>
 			<p class="text-xs">

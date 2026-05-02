@@ -12,6 +12,7 @@
 		type Connection
 	} from '$lib/connections';
 	import { clearLocalKey, disconnectActiveSigner, parseBunkerInput } from '$lib/signer';
+	import { displayLabel } from '$lib/labels';
 	import Avatar from './Avatar.svelte';
 
 	let connections: Connection[] = $state([]);
@@ -62,8 +63,12 @@
 		}
 	}
 
+	// Wraps the shared displayLabel() helper (lib/labels.ts). AccountSwitcher
+	// only has the Connection record to work with — no profile cache here —
+	// so the precedence collapses to: connection.label → npub-prefix(12).
+	// design-system.md §7 (clave-casa) / §7 (iOS Account.displayLabel).
 	function label(c: Connection): string {
-		return c.label ?? shortPubkey(c.accountPubkey);
+		return displayLabel({ connection: c, pubkeyHex: c.accountPubkey });
 	}
 
 	function pick(pubkey: string) {
