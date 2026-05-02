@@ -23,7 +23,14 @@
 	import Avatar from '$lib/components/Avatar.svelte';
 	import FormSectionCard from '$lib/components/FormSectionCard.svelte';
 	import { copyToClipboard } from '$lib/clipboard';
-	import { defaultAvatarUrl } from '$lib/avatar-defaults';
+	import {
+		defaultAvatarUrl,
+		getRobohashSet,
+		isRobohashUrl,
+		ROBOHASH_SETS,
+		setRobohashSet,
+		type RobohashSet
+	} from '$lib/avatar-defaults';
 
 	// Kind 0 metadata fields per NIP-01 (name, about, picture) +
 	// NIP-24 (display_name, website, banner, bot) + NIP-05 (nip05) +
@@ -74,6 +81,7 @@
 	let approvalWait = $state<{ attempt: number; startedAt: number } | undefined>(undefined);
 	let approvalElapsedSec = $state(0);
 	let approvalTickInterval: ReturnType<typeof setInterval> | undefined;
+	let fetchFailed = $state(false);
 
 	// Track which account we've loaded so storage events that don't actually
 	// change the active account don't trigger pointless reloads.
@@ -99,6 +107,7 @@
 		lastSavedEvent = undefined;
 		clearApprovalTick();
 		loadError = '';
+		fetchFailed = false;
 		phase = 'loading';
 
 		try {
@@ -119,10 +128,22 @@
 
 	async function loadProfile() {
 		nip65Present = await hasNip65(userPubkey);
-		const event = await fetchLatestProfile(userPubkey);
-		if (event) {
+		const result = await fetchLatestProfile(userPubkey);
+
+		if (result.status === 'failed') {
+			// Network/timeout — we don't know what kind 0 already exists.
+			// Refuse to prefill the form so a careless Save can't overwrite
+			// real data we couldn't see.
+			loadError =
+				'Could not load your existing profile data. Check your connection and refresh — saving now would overwrite anything your kind 0 already has.';
+			fetchFailed = true;
+			return;
+		}
+
+		fetchFailed = false;
+		if (result.status === 'found') {
 			try {
-				const parsed = JSON.parse(event.content) as Record<string, unknown>;
+				const parsed = JSON.parse(result.event.content) as Record<string, unknown>;
 				const stringKeys = new Set<keyof ProfileFields>([
 					'name',
 					'display_name',
@@ -169,11 +190,9 @@
 			}
 		}
 
-		// If after loading (or in the absence of an existing kind 0) the
-		// picture field is still empty, prefill it with the per-account
-		// Robohash URL so the user can SEE what will be published. save()
-		// also defaults this on publish, but pre-filling makes it visible
-		// without forcing a save round-trip first.
+		// status === 'no-event' OR 'found' but kind 0 had no picture →
+		// safely prefill the picture field so the user can SEE the Robohash
+		// URL that would be published if they save without changes.
 		if (!fields.picture) {
 			fields.picture = defaultAvatarUrl(userPubkey);
 		}
@@ -181,6 +200,13 @@
 
 	async function save() {
 		if (phase !== 'editing') return;
+		// Refuse to publish if the existing kind 0 couldn't be loaded — saving
+		// blind would silently overwrite whatever's actually on relays.
+		if (fetchFailed) {
+			loadError =
+				'Existing profile data didn’t load — refresh and retry before saving so we don’t overwrite anything.';
+			return;
+		}
 		let active = getActiveSigner();
 		if (!active || active.userPubkey !== userPubkey) {
 			if (!conn) {
@@ -210,14 +236,11 @@
 		const cleanExtras: Record<string, unknown> = { ...extraFields };
 		for (const dep of Object.keys(DEPRECATED_ALIASES)) delete cleanExtras[dep];
 
-		// If the user hasn't set a picture, default to their per-account
-		// Robohash so the kind 0 actually publishes a picture URL — other
-		// clients then render the same robot we render locally, instead of
-		// falling back to their own default avatar.
-		const fieldsToPublish: ProfileFields = {
-			...fields,
-			picture: fields.picture || defaultAvatarUrl(userPubkey)
-		};
+		// Publish whatever's in the form. If the user cleared the picture
+		// field, the kind 0 publishes with no `picture` key (stripEmpty
+		// drops empty strings) — clean opt-out for users who don't want
+		// a PFP at all.
+		const fieldsToPublish = fields;
 		const content = JSON.stringify({ ...cleanExtras, ...stripEmpty(fieldsToPublish) });
 		try {
 			const signed = await signEventViaBunker(
@@ -533,7 +556,10 @@
 			<div class="flex items-center gap-3 pt-2">
 				<button
 					type="submit"
-					disabled={phase === 'publishing'}
+					disabled={phase === 'publishing' || fetchFailed}
+					title={fetchFailed
+						? 'Refresh the page to load existing data before saving'
+						: undefined}
 					class="rounded-xl bg-[var(--clave-tint)] px-4 py-2.5 text-sm font-semibold text-[var(--clave-tint-fg)] hover:opacity-90 disabled:opacity-50"
 				>
 					{phase === 'publishing'
@@ -610,8 +636,8 @@
 				picture={editingPictureUrl}
 			/>
 			<p class="text-xs">
-				Live preview. Leaving this blank publishes the per-account Robohash robot as your kind
-				0 picture, so other clients show the same robot.
+				Live preview. Leave blank for no picture, paste your own URL, or pick a Robohash style
+				below.
 			</p>
 		</div>
 		<label class="mt-4 block">
@@ -629,10 +655,43 @@
 				}}
 			/>
 		</label>
-		<p class="mt-2 text-xs">
-			Leaving this blank auto-fills the Robohash URL on Save & publish — your kind 0 will
-			carry that URL so other clients render the same robot.
-		</p>
+		{#if !editingPictureUrl || isRobohashUrl(editingPictureUrl)}
+			<fieldset class="mt-4">
+				<legend class="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+					Robohash style
+				</legend>
+				<div class="mt-2 grid grid-cols-5 gap-1.5">
+					{#each ROBOHASH_SETS as s (s.id)}
+						{@const isActive = getRobohashSet() === s.id}
+						<button
+							type="button"
+							onclick={() => {
+								setRobohashSet(s.id as RobohashSet);
+								// Regenerate the URL with the new set so the preview updates.
+								// Empty stays empty (treats blank as opt-out).
+								if (isRobohashUrl(editingPictureUrl)) {
+									editingPictureUrl = defaultAvatarUrl(userPubkey, s.id as RobohashSet);
+								}
+							}}
+							class="rounded-lg border px-2 py-1.5 text-[11px] font-medium"
+							class:active-set={isActive}
+							class:border-tint={isActive}
+							style:border-color={isActive ? 'var(--clave-tint)' : 'var(--clave-border)'}
+							style:background-color={isActive
+								? 'color-mix(in srgb, var(--clave-tint) 12%, transparent)'
+								: 'transparent'}
+							style:color={isActive ? 'var(--clave-tint)' : 'inherit'}
+						>
+							{s.label}
+						</button>
+					{/each}
+				</div>
+				<p class="mt-2 text-[11px]">
+					Leave the URL field blank to publish a kind 0 with no picture — other clients will
+					use their own default.
+				</p>
+			</fieldset>
+		{/if}
 		<div class="mt-5 flex justify-end gap-2">
 			<button
 				type="button"

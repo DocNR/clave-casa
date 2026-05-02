@@ -1,7 +1,8 @@
 <!-- src/lib/components/Avatar.svelte -->
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { themeForPubkey, gradientCss, fgForHex } from '$lib/theme';
-	import { defaultAvatarUrl } from '$lib/avatar-defaults';
+	import { defaultAvatarUrl, ROBOHASH_SET_KEY } from '$lib/avatar-defaults';
 
 	type Size = 'sm' | 'md' | 'lg' | 'xl';
 
@@ -11,6 +12,18 @@
 		label,
 		picture
 	}: { pubkey: string; size?: Size; label?: string; picture?: string } = $props();
+
+	// Bump on robohash-set storage events so the $derived effectivePicture
+	// re-evaluates with the new set when the user changes their style.
+	let robohashSetVersion = $state(0);
+
+	onMount(() => {
+		const onStorage = (e: StorageEvent) => {
+			if (e.key === ROBOHASH_SET_KEY) robohashSetVersion += 1;
+		};
+		window.addEventListener('storage', onStorage);
+		return () => window.removeEventListener('storage', onStorage);
+	});
 
 	const dimensions: Record<Size, { px: number; ring: number; font: string }> = {
 		sm: { px: 24, ring: 1.5, font: '11px' },
@@ -33,7 +46,12 @@
 		(label ?? '').trim().slice(0, 1).toUpperCase() || pubkey.slice(0, 1).toUpperCase()
 	);
 	const fg = $derived(fgForHex(theme.start));
-	const effectivePicture = $derived(picture || defaultAvatarUrl(pubkey));
+	// `robohashSetVersion` referenced inside the function so a set change
+	// invalidates the derived value and re-fetches with the new set.
+	const effectivePicture = $derived.by(() => {
+		void robohashSetVersion; // reactive dependency
+		return picture || defaultAvatarUrl(pubkey);
+	});
 	const showImage = $derived(!!effectivePicture && !imgFailed);
 
 	// Reset failure state when the underlying account or picture changes.

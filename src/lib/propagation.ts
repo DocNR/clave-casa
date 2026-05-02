@@ -188,11 +188,65 @@ export async function scanAndRebroadcast(
 // the user's NIP-65 read relays UNIONED with the bunker relay + broadcast
 // set, since the user's actual data is most likely on the bunker relay
 // regardless of what their NIP-65 declares.
-export async function fetchLatestProfile(userPubkey: string): Promise<Event | null> {
+//
+// Returns a tagged status so the caller can distinguish *"confirmed no kind
+// 0 with this pubkey"* (`no-event` — safe to prefill defaults) from *"all
+// relays failed / timed out"* (`failed` — risky to prefill, may overwrite
+// existing data the user can't see). We track per-relay close reasons:
+// EOSE-driven closes mean the relay actually answered "no events match";
+// other close reasons (timeouts, websocket errors) mean we couldn't tell.
+export type ProfileFetchResult =
+	| { status: 'found'; event: Event }
+	| { status: 'no-event' }
+	| { status: 'failed' };
+
+export async function fetchLatestProfile(userPubkey: string): Promise<ProfileFetchResult> {
 	const declared = await getReadRelays(userPubkey);
-	const set = new Set<string>([...declared, ...readDiscoveryRelays()]);
+	const relays = Array.from(new Set([...declared, ...readDiscoveryRelays()]));
 	const filter: Filter = { kinds: [METADATA_KIND], authors: [userPubkey], limit: 1 };
-	return await getPool().get(Array.from(set), filter, { maxWait: RELAY_TIMEOUT_MS });
+	const maxWait = RELAY_TIMEOUT_MS;
+
+	return new Promise((resolve) => {
+		let foundEvent: Event | null = null;
+		let settled = false;
+
+		const finish = (result: ProfileFetchResult) => {
+			if (settled) return;
+			settled = true;
+			resolve(result);
+		};
+
+		const sub = getPool().subscribeManyEose(relays, filter, {
+			onevent: (e) => {
+				if (!foundEvent || (e.created_at ?? 0) > (foundEvent.created_at ?? 0)) {
+					foundEvent = e;
+				}
+			},
+			onclose: (reasons) => {
+				if (foundEvent) {
+					finish({ status: 'found', event: foundEvent });
+					return;
+				}
+				// Reasons array is one entry per relay (in input order). EOSE is
+				// the clean "no events" signal; anything else means we couldn't
+				// confirm.
+				const cleanCount = reasons.filter(
+					(r) => r === 'closed by caller' || /eose/i.test(r ?? '')
+				).length;
+				finish({ status: cleanCount > 0 ? 'no-event' : 'failed' });
+			},
+			maxWait
+		});
+
+		// Safety net: if onclose somehow doesn't fire within the wait window
+		// (rare, but websocket libraries vary), resolve based on what we have.
+		setTimeout(() => {
+			if (settled) return;
+			sub.close();
+			if (foundEvent) finish({ status: 'found', event: foundEvent });
+			else finish({ status: 'failed' });
+		}, maxWait + 1000);
+	});
 }
 
 export async function hasNip65(userPubkey: string): Promise<boolean> {
