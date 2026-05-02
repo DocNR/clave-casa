@@ -32,6 +32,10 @@ npm run dev
 - **CSS variables** for design tokens (`--clave-tint`, `--clave-surface`, etc.). Don't bake hardcoded colors into components.
 - **Keep components small and focused.** Each file should have one clear responsibility with a well-defined interface.
 
+## Design language
+
+clave.casa shares its visual language with [Clave iOS](https://github.com/DocNR/clave). Before introducing new components, surfaces, or color treatments, read [`docs/design-system.md`](./docs/design-system.md) — it covers the AccountTheme palette + SHA-256 hash, identity-vs-functional zone philosophy, avatar treatments, modal patterns, and anti-patterns to avoid. iOS is the source of truth ([clave/docs/design-system.md](https://github.com/DocNR/clave/blob/main/docs/design-system.md)); the web doc records the small set of platform translations.
+
 ## Testing strategy
 
 We don't currently ship automated tests. Verification today is:
