@@ -1,7 +1,8 @@
 <!-- src/lib/components/StatusPill.svelte -->
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	type Tone = 'ok' | 'fail' | 'pending' | 'neutral';
-	let { tone = 'neutral', children }: { tone?: Tone; children?: any } = $props();
+	let { tone = 'neutral', children }: { tone?: Tone; children?: Snippet } = $props();
 
 	const toneClasses: Record<Tone, string> = {
 		ok: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',

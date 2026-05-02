@@ -1,6 +1,7 @@
 <!-- src/lib/components/FormSectionCard.svelte -->
 <script lang="ts">
-	let { label, children }: { label?: string; children?: any } = $props();
+	import type { Snippet } from 'svelte';
+	let { label, children }: { label?: string; children?: Snippet } = $props();
 </script>
 
 <section

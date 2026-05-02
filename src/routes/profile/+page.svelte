@@ -187,7 +187,7 @@
 </script>
 
 {#if phase === 'loading'}
-	<p class="py-12 text-center text-sm text-neutral-500">Loading your profile…</p>
+	<p class="py-12 text-center text-sm text-[var(--clave-text-muted)]">Loading your profile…</p>
 {:else}
 	<div class="space-y-6">
 		<header class="flex items-center gap-3">
@@ -318,13 +318,13 @@
 				</p>
 				{#if scanReport.updated.length > 0 || scanReport.offline.length > 0}
 					<details class="mt-2">
-						<summary class="cursor-pointer text-neutral-600 dark:text-neutral-400">Show details</summary>
+						<summary class="cursor-pointer text-[var(--clave-text-muted)]">Show details</summary>
 						<ul class="mt-2 space-y-1 font-mono text-xs">
 							{#each scanReport.updated as r}
 								<li class="text-emerald-700 dark:text-emerald-400">↑ {r.url}</li>
 							{/each}
 							{#each scanReport.offline as url}
-								<li class="text-neutral-500">— {url} (offline)</li>
+								<li class="text-[var(--clave-text-muted)]">— {url} (offline)</li>
 							{/each}
 						</ul>
 					</details>

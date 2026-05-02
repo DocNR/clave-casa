@@ -95,7 +95,7 @@
 <div class="mx-auto max-w-md space-y-6 py-8">
 	<header class="space-y-2">
 		<h1 class="text-2xl font-semibold">Connect a signer</h1>
-		<p class="text-sm text-neutral-600 dark:text-neutral-400">
+		<p class="text-sm text-[var(--clave-text-muted)]">
 			Paste a bunker URI from Clave or any NIP-46 signer (Amber, nsec.app, …). Your private key
 			stays on the signer.
 		</p>
@@ -150,7 +150,7 @@
 			</button>
 		</form>
 
-		<details class="text-sm text-neutral-600 dark:text-neutral-400">
+		<details class="text-sm text-[var(--clave-text-muted)]">
 			<summary class="cursor-pointer">Where do I get a bunker URI?</summary>
 			<ul class="ml-4 mt-2 list-disc space-y-1">
 				<li><strong>Clave (iOS):</strong> tap your account, then “Connect a client” to copy a bunker URI.</li>

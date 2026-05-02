@@ -12,6 +12,7 @@
 	let connections: Connection[] = $state([]);
 	let activePubkey: string | undefined = $state(undefined);
 	let open = $state(false);
+	let containerEl: HTMLElement | undefined = $state();
 
 	onMount(() => {
 		connections = loadConnections();
@@ -20,8 +21,18 @@
 			connections = loadConnections();
 			activePubkey = getActivePubkey();
 		};
+		const onMouseDown = (e: MouseEvent) => {
+			if (!open) return;
+			if (containerEl && e.target instanceof Node && !containerEl.contains(e.target)) {
+				open = false;
+			}
+		};
 		window.addEventListener('storage', onStorage);
-		return () => window.removeEventListener('storage', onStorage);
+		window.addEventListener('mousedown', onMouseDown);
+		return () => {
+			window.removeEventListener('storage', onStorage);
+			window.removeEventListener('mousedown', onMouseDown);
+		};
 	});
 
 	function shortPubkey(hex: string): string {
@@ -45,7 +56,7 @@
 {#if connections.length === 0}
 	<a href="/connect" class="text-sm font-medium text-[var(--clave-tint)] hover:underline">Connect</a>
 {:else}
-	<div class="relative">
+	<div class="relative" bind:this={containerEl}>
 		<button
 			type="button"
 			class="flex items-center gap-2 rounded-full border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] py-1 pl-1 pr-3 text-sm font-medium hover:bg-[var(--clave-surface)]"
