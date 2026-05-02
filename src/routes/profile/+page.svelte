@@ -244,22 +244,71 @@
 	);
 
 	const npub = $derived(userPubkey ? npubEncode(userPubkey) : '');
-	const npubShort = $derived(npub ? `${npub.slice(0, 16)}…` : '');
+	const npubShort = $derived(npub ? `${npub.slice(0, 12)}…${npub.slice(-6)}` : '');
+
+	let npubCopied = $state(false);
+	let npubCopyTimer: ReturnType<typeof setTimeout> | undefined;
+
+	async function copyNpub() {
+		if (!npub) return;
+		try {
+			await navigator.clipboard.writeText(npub);
+			npubCopied = true;
+			if (npubCopyTimer) clearTimeout(npubCopyTimer);
+			npubCopyTimer = setTimeout(() => (npubCopied = false), 1600);
+		} catch (e) {
+			console.warn('[clave.casa] clipboard write failed:', e);
+		}
+	}
 </script>
 
 {#if phase === 'loading'}
 	<p class="py-12 text-center text-sm text-[var(--clave-text-muted)]">Loading your profile…</p>
 {:else}
 	<div class="space-y-6">
-		<header class="flex items-center gap-3">
-			<Avatar pubkey={userPubkey} size="lg" label={fields.display_name || fields.name} picture={fields.picture} />
-			<div class="min-w-0 flex-1">
-				<h1 class="truncate text-2xl font-semibold">
+		<header class="flex flex-col items-center gap-3 py-4 text-center">
+			<Avatar
+				pubkey={userPubkey}
+				size="xl"
+				label={fields.display_name || fields.name}
+				picture={fields.picture}
+			/>
+			<div class="min-w-0 max-w-full">
+				<h1 class="truncate text-3xl font-semibold sm:text-4xl">
 					{fields.display_name || fields.name || 'Edit profile'}
 				</h1>
-				<p class="truncate font-mono text-xs text-[var(--clave-text-muted)]">
-					{npubShort}
-				</p>
+				<button
+					type="button"
+					onclick={copyNpub}
+					title="Copy full npub to clipboard"
+					class="mt-1.5 inline-flex max-w-full items-center gap-1.5 rounded-full bg-[var(--clave-surface)] px-3 py-1 font-mono text-sm text-[var(--clave-text-muted)] transition-colors hover:text-[var(--clave-tint)]"
+				>
+					<span class="truncate">{npubShort}</span>
+					{#if npubCopied}
+						<svg viewBox="0 0 16 16" class="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden="true">
+							<path
+								d="M3 8.5l3.5 3.5 6.5-7"
+								stroke="currentColor"
+								stroke-width="2"
+								fill="none"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
+						</svg>
+						<span class="text-xs text-emerald-600 dark:text-emerald-400">Copied</span>
+					{:else}
+						<svg viewBox="0 0 16 16" class="h-3.5 w-3.5 shrink-0 opacity-50" aria-hidden="true">
+							<rect x="4.5" y="4.5" width="7" height="9" rx="1.5" stroke="currentColor" stroke-width="1.4" fill="none" />
+							<path
+								d="M6.5 4.5V3a1 1 0 011-1h4a1 1 0 011 1v8a1 1 0 01-1 1h-1.5"
+								stroke="currentColor"
+								stroke-width="1.4"
+								fill="none"
+								stroke-linecap="round"
+							/>
+						</svg>
+					{/if}
+				</button>
 			</div>
 		</header>
 

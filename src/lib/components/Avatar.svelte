@@ -2,7 +2,7 @@
 <script lang="ts">
 	import { themeForPubkey, gradientCss, fgForHex } from '$lib/theme';
 
-	type Size = 'sm' | 'md' | 'lg';
+	type Size = 'sm' | 'md' | 'lg' | 'xl';
 
 	let {
 		pubkey,
@@ -14,7 +14,8 @@
 	const dimensions: Record<Size, { px: number; ring: number; font: string }> = {
 		sm: { px: 24, ring: 1.5, font: '11px' },
 		md: { px: 32, ring: 2, font: '13px' },
-		lg: { px: 44, ring: 2, font: '17px' }
+		lg: { px: 44, ring: 2, font: '17px' },
+		xl: { px: 96, ring: 3, font: '36px' }
 	};
 
 	let imgFailed = $state(false);
