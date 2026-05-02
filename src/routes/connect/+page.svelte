@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { upsertConnection, type Connection } from '$lib/connections';
+	import { upsertConnection, setActivePubkey, type Connection } from '$lib/connections';
 	import { connectSigner, parseBunkerInput, type ConnectStage } from '$lib/signer';
 	import StatusPill from '$lib/components/StatusPill.svelte';
 
@@ -64,6 +64,8 @@
 				addedAt: Date.now()
 			};
 			upsertConnection(conn);
+			setActivePubkey(userPubkey);
+			window.dispatchEvent(new StorageEvent('storage', { key: 'clave-casa.activeAccount.v1' }));
 			stopElapsedTimer();
 			goto('/profile', { replaceState: true });
 		} catch (e) {
