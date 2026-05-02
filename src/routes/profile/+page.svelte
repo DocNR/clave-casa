@@ -266,15 +266,15 @@
 	<p class="py-12 text-center text-sm text-[var(--clave-text-muted)]">Loading your profile…</p>
 {:else}
 	<div class="space-y-6">
-		<header class="flex flex-col items-center gap-3 py-4 text-center">
+		<header class="flex items-center gap-4 py-2">
 			<Avatar
 				pubkey={userPubkey}
 				size="xl"
 				label={fields.display_name || fields.name}
 				picture={fields.picture}
 			/>
-			<div class="min-w-0 max-w-full">
-				<h1 class="truncate text-3xl font-semibold sm:text-4xl">
+			<div class="min-w-0 flex-1">
+				<h1 class="truncate text-3xl font-semibold">
 					{fields.display_name || fields.name || 'Edit profile'}
 				</h1>
 				<button
