@@ -12,7 +12,8 @@
 
 {#if results.length > 0}
 	<div class="mt-3">
-		<p class="text-[11px] font-semibold uppercase tracking-wider text-[var(--clave-text-muted)]">
+		<!-- Sentence-case headline (design-system.md §5). -->
+		<p class="text-sm font-semibold text-[var(--clave-text)]">
 			{title}
 		</p>
 		<div class="mt-2 flex flex-wrap gap-1.5">

@@ -8,7 +8,9 @@
 	class="space-y-3 rounded-2xl border border-[var(--clave-border)] bg-[var(--clave-surface)] p-4"
 >
 	{#if label}
-		<p class="text-[11px] font-semibold uppercase tracking-wider text-[var(--clave-text-muted)]">
+		<!-- Sentence-case headline (design-system.md §5: textCase(nil), .headline weight).
+		     iOS uses Form Section headers with overridden text-case; web matches. -->
+		<p class="text-sm font-semibold text-[var(--clave-text)]">
 			{label}
 		</p>
 	{/if}

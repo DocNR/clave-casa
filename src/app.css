@@ -19,6 +19,7 @@
 	--clave-surface: rgb(245 245 245 / 0.6);
 	--clave-surface-alt: rgb(255 255 255);
 	--clave-border: rgb(0 0 0 / 0.08);
+	--clave-text: rgb(23 23 23); /* primary body / heading copy — matches text-neutral-900 */
 	--clave-text-muted: rgb(115 115 115);
 
 	/* Radii. Match iOS 16pt cards / 12pt inputs. */
