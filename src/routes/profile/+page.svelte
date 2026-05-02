@@ -128,10 +128,16 @@
 			}
 			fields = next;
 			extraFields = extras;
-			if (conn && (next.display_name || next.name)) {
-				const updated = { ...conn, label: next.display_name || next.name };
+			if (conn && (next.display_name || next.name || next.picture)) {
+				const updated = {
+					...conn,
+					label: next.display_name || next.name || conn.label,
+					pictureUrl: next.picture || conn.pictureUrl
+				};
 				upsertConnection(updated);
 				conn = updated;
+				// Notify other listeners (AccountSwitcher) that the connection changed
+				window.dispatchEvent(new StorageEvent('storage', { key: 'clave-casa.connections.v1' }));
 			}
 		} catch {
 			// content wasn't JSON; ignore
@@ -246,7 +252,7 @@
 {:else}
 	<div class="space-y-6">
 		<header class="flex items-center gap-3">
-			<Avatar pubkey={userPubkey} size="lg" label={fields.display_name || fields.name} />
+			<Avatar pubkey={userPubkey} size="lg" label={fields.display_name || fields.name} picture={fields.picture} />
 			<div class="min-w-0 flex-1">
 				<h1 class="truncate text-2xl font-semibold">
 					{fields.display_name || fields.name || 'Edit profile'}

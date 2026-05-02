@@ -69,7 +69,7 @@
 			onclick={() => (open = !open)}
 		>
 			{#if active}
-				<Avatar pubkey={active.accountPubkey} size="sm" label={active.label} />
+				<Avatar pubkey={active.accountPubkey} size="sm" label={active.label} picture={active.pictureUrl} />
 				<span>{label(active)}</span>
 			{:else}
 				<span class="px-2">Pick account</span>
@@ -89,7 +89,7 @@
 						class:font-semibold={c.accountPubkey === activePubkey}
 						onclick={() => pick(c.accountPubkey)}
 					>
-						<Avatar pubkey={c.accountPubkey} size="sm" label={c.label} />
+						<Avatar pubkey={c.accountPubkey} size="sm" label={c.label} picture={c.pictureUrl} />
 						<span class="flex-1 truncate">{label(c)}</span>
 						{#if c.accountPubkey === activePubkey}
 							<svg viewBox="0 0 16 16" class="h-3.5 w-3.5 text-[var(--clave-tint)]" aria-hidden="true">

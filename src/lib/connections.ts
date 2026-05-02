@@ -8,6 +8,7 @@ export type Connection = {
 	accountPubkey: string; // hex
 	bunkerUri: string;     // bunker://... or nostrconnect://...
 	label?: string;        // user-set or derived from kind 0
+	pictureUrl?: string;   // cached kind 0 `picture` URL
 	addedAt: number;       // unix ms
 };
 
