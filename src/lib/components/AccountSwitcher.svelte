@@ -1,3 +1,4 @@
+<!-- src/lib/components/AccountSwitcher.svelte -->
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import {
@@ -6,6 +7,7 @@
 		setActivePubkey,
 		type Connection
 	} from '$lib/connections';
+	import Avatar from './Avatar.svelte';
 
 	let connections: Connection[] = $state([]);
 	let activePubkey: string | undefined = $state(undefined);
@@ -23,7 +25,7 @@
 	});
 
 	function shortPubkey(hex: string): string {
-		return hex.slice(0, 8) + '…' + hex.slice(-4);
+		return hex.slice(0, 8) + '…';
 	}
 
 	function label(c: Connection): string {
@@ -34,7 +36,6 @@
 		setActivePubkey(pubkey);
 		activePubkey = pubkey;
 		open = false;
-		// Trigger a refresh so any active page re-reads connection state.
 		window.dispatchEvent(new StorageEvent('storage', { key: 'clave-casa.activeAccount.v1' }));
 	}
 
@@ -42,34 +43,47 @@
 </script>
 
 {#if connections.length === 0}
-	<a href="/connect" class="text-sm text-blue-600 hover:underline dark:text-blue-400">Connect</a>
+	<a href="/connect" class="text-sm font-medium text-[var(--clave-tint)] hover:underline">Connect</a>
 {:else}
 	<div class="relative">
 		<button
 			type="button"
-			class="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:bg-neutral-800"
+			class="flex items-center gap-2 rounded-full border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] py-1 pl-1 pr-3 text-sm font-medium hover:bg-[var(--clave-surface)]"
 			onclick={() => (open = !open)}
 		>
-			{active ? label(active) : 'Pick account'}
-			<span aria-hidden="true" class="ml-1 text-neutral-500">▾</span>
+			{#if active}
+				<Avatar pubkey={active.accountPubkey} size="sm" label={active.label} />
+				<span>{label(active)}</span>
+			{:else}
+				<span class="px-2">Pick account</span>
+			{/if}
+			<svg viewBox="0 0 12 12" class="h-3 w-3 opacity-50" aria-hidden="true">
+				<path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+			</svg>
 		</button>
 		{#if open}
 			<div
-				class="absolute right-0 z-10 mt-1 w-56 overflow-hidden rounded-md border border-neutral-200 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-900"
+				class="absolute right-0 z-10 mt-1.5 w-64 overflow-hidden rounded-2xl border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] shadow-lg"
 			>
 				{#each connections as c}
 					<button
 						type="button"
-						class="block w-full px-3 py-2 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800"
+						class="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm hover:bg-[var(--clave-surface)]"
 						class:font-semibold={c.accountPubkey === activePubkey}
 						onclick={() => pick(c.accountPubkey)}
 					>
-						{label(c)}
+						<Avatar pubkey={c.accountPubkey} size="sm" label={c.label} />
+						<span class="flex-1 truncate">{label(c)}</span>
+						{#if c.accountPubkey === activePubkey}
+							<svg viewBox="0 0 16 16" class="h-3.5 w-3.5 text-[var(--clave-tint)]" aria-hidden="true">
+								<path d="M3 8.5l3.5 3.5 6.5-7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+							</svg>
+						{/if}
 					</button>
 				{/each}
 				<a
 					href="/connect"
-					class="block border-t border-neutral-200 px-3 py-2 text-left text-sm text-blue-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-blue-400 dark:hover:bg-neutral-800"
+					class="block border-t border-[var(--clave-border)] px-3 py-2.5 text-sm font-medium text-[var(--clave-tint)] hover:bg-[var(--clave-surface)]"
 				>
 					+ Add another account
 				</a>
