@@ -673,18 +673,18 @@
 				</legend>
 				<div class="mt-2 grid grid-cols-3 gap-1.5 sm:grid-cols-5">
 					{#each ROBOHASH_SETS as s (s.id)}
-						{@const isActive = currentSet === s.id}
+						{@const isActive =
+							currentSet === s.id && isRobohashUrl(editingPictureUrl)}
 						<button
 							type="button"
 							onclick={() => {
 								setRobohashSet(s.id);
-								// If field is empty, fill with the new style. If it's
-								// already a Robohash, swap to the new set. Custom URLs
-								// are left alone (the picker only renders when the URL
-								// is empty or a Robohash anyway).
-								if (!editingPictureUrl || isRobohashUrl(editingPictureUrl)) {
-									editingPictureUrl = defaultAvatarUrl(userPubkey, s.id);
-								}
+								// Always (re)populate the URL with the chosen style — both
+								// when the field was empty (pick to enable Robohash) and
+								// when it already had a Robohash (swap sets). Custom URLs
+								// are left alone, but the picker isn't rendered in that
+								// case.
+								editingPictureUrl = defaultAvatarUrl(userPubkey, s.id);
 							}}
 							class="rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors"
 							style:border-color={isActive ? 'var(--clave-tint)' : 'var(--clave-border)'}
@@ -698,7 +698,11 @@
 					{/each}
 				</div>
 				<p class="mt-2 text-[11px]">
-					Or remove the picture entirely so other clients use their own default avatar.
+					{#if !editingPictureUrl}
+						No picture set — pick a style to use Robohash, or click Apply to publish blank.
+					{:else}
+						Or remove the picture entirely so other clients use their own default avatar.
+					{/if}
 				</p>
 			</fieldset>
 		{/if}
