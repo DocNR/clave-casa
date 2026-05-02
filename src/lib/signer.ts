@@ -10,7 +10,12 @@
 // added by the propagation layer only when actually publishing/fetching.
 
 import { SimplePool } from 'nostr-tools/pool';
-import { BunkerSigner, parseBunkerInput, type BunkerPointer } from 'nostr-tools/nip46';
+import {
+	BunkerSigner,
+	createNostrConnectURI,
+	parseBunkerInput,
+	type BunkerPointer
+} from 'nostr-tools/nip46';
 import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import { bytesToHex, hexToBytes } from 'nostr-tools/utils';
 import * as nip04 from 'nostr-tools/nip04';
@@ -155,6 +160,79 @@ export async function connectSigner(
 	activeBp = bp;
 	activeLocalKey = localKey;
 	return { signer, userPubkey, bp };
+}
+
+// Default relays for the nostrconnect:// flow. These are the relays the
+// nostrconnect URI advertises — the signer needs to monitor at least one
+// of them to see our connect request. Multi-relay choice maximizes the
+// chance any signer (Clave, Amber, nsec.app, …) sees us. Clave's primary
+// is included so Clave users get a fast hop.
+const NOSTRCONNECT_RELAYS: readonly string[] = [
+	'wss://relay.nsec.app',
+	'wss://relay.damus.io',
+	'wss://relay.powr.build'
+];
+
+// Establish a NIP-46 signer via the nostrconnect:// flow — we generate a
+// nostrconnect URI, the user scans/pastes it into their signer, the signer
+// publishes a connect response back to our local pubkey on the advertised
+// relays, and BunkerSigner.fromURI resolves with a working signer.
+export type NostrConnectOptions = {
+	timeoutMs?: number;
+	onUri?: (uri: string) => void;
+	onStage?: (stage: ConnectStage, detail?: string) => void;
+	signal?: AbortSignal;
+	clientName?: string;
+};
+
+export async function connectViaNostrConnect(
+	opts: NostrConnectOptions = {}
+): Promise<{ signer: BunkerSigner; userPubkey: string; bp: BunkerPointer; uri: string }> {
+	const timeoutMs = opts.timeoutMs ?? 5 * 60 * 1000;
+	const stage = (s: ConnectStage, detail?: string) => {
+		console.debug('[clave.casa] nostrconnect stage:', s, detail ?? '');
+		opts.onStage?.(s, detail);
+	};
+
+	stage('parsing');
+	const localKey = generateSecretKey();
+	const localPubkey = getPublicKey(localKey);
+	const secret = bytesToHex(generateSecretKey()).slice(0, 16);
+
+	const uri = createNostrConnectURI({
+		clientPubkey: localPubkey,
+		relays: [...NOSTRCONNECT_RELAYS],
+		secret,
+		name: opts.clientName ?? 'clave.casa',
+		url: typeof location !== 'undefined' ? location.origin : 'https://clave.casa'
+	});
+
+	stage('opening-relay', NOSTRCONNECT_RELAYS.join(', '));
+	opts.onUri?.(uri);
+
+	stage('awaiting-ack');
+	const p = getPool();
+	const signer = await BunkerSigner.fromURI(localKey, uri, { pool: p }, opts.signal ?? timeoutMs);
+
+	stage('fetching-pubkey');
+	const userPubkey = await signer.getPublicKey();
+	const bp: BunkerPointer = signer.bp;
+	stage('ready', userPubkey);
+
+	// Persist the local key under the *bunker* pubkey we just learned so a
+	// subsequent reload via connectSigner can find it. Matches the bunker://
+	// flow's persistence model.
+	const LOCAL_KEY_PREFIX = 'clave-casa.localKey.';
+	if (typeof localStorage !== 'undefined') {
+		localStorage.setItem(LOCAL_KEY_PREFIX + bp.pubkey, bytesToHex(localKey));
+	}
+
+	activeSigner = signer;
+	activeUserPubkey = userPubkey;
+	activeBunkerRelays = [...bp.relays];
+	activeBp = bp;
+	activeLocalKey = localKey;
+	return { signer, userPubkey, bp, uri };
 }
 
 // Sign an event with retry-on-approval-pending. The first sign of a given

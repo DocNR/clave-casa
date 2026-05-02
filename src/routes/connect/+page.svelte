@@ -1,10 +1,19 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
+	import QRCode from 'qrcode';
 	import { upsertConnection, setActivePubkey, type Connection } from '$lib/connections';
-	import { connectSigner, parseBunkerInput, type ConnectStage } from '$lib/signer';
+	import {
+		connectSigner,
+		connectViaNostrConnect,
+		parseBunkerInput,
+		type ConnectStage
+	} from '$lib/signer';
 	import StatusPill from '$lib/components/StatusPill.svelte';
 
+	type Tab = 'qr' | 'paste';
+
+	let tab = $state<Tab>('qr');
 	let pasted = $state('');
 	let status: 'idle' | 'connecting' | 'error' = $state('idle');
 	let errorMessage = $state('');
@@ -12,6 +21,13 @@
 	let stageDetail = $state('');
 	let elapsedSec = $state(0);
 	let elapsedTimer: ReturnType<typeof setInterval> | undefined;
+
+	// nostrconnect flow state
+	let ncUri = $state('');
+	let ncQrSvg = $state('');
+	let ncCopied = $state(false);
+	let ncCopyTimer: ReturnType<typeof setTimeout> | undefined;
+	let ncAbort: AbortController | undefined;
 
 	onMount(() => {
 		// If the iOS-side helper sent us here with #bunker=..., consume it
@@ -21,8 +37,20 @@
 			const params = new URLSearchParams(fragment);
 			const bunker = params.get('bunker');
 			history.replaceState(null, '', '/connect');
-			if (bunker) handoff(bunker);
+			if (bunker) {
+				tab = 'paste';
+				handoffBunker(bunker);
+				return;
+			}
 		}
+		// Default tab: kick off the nostrconnect flow so the QR is ready
+		// when the user looks at the page.
+		startNostrConnectFlow();
+	});
+
+	onDestroy(() => {
+		ncAbort?.abort();
+		stopElapsedTimer();
 	});
 
 	function startElapsedTimer() {
@@ -35,19 +63,61 @@
 		elapsedTimer = undefined;
 	}
 
-	async function handoff(bunkerUri: string) {
+	async function startNostrConnectFlow() {
+		// Cancel any prior in-flight nostrconnect attempt before starting.
+		ncAbort?.abort();
+		ncAbort = new AbortController();
+		ncUri = '';
+		ncQrSvg = '';
+		errorMessage = '';
+		status = 'idle';
+
+		try {
+			const { userPubkey, uri } = await connectViaNostrConnect({
+				signal: ncAbort.signal,
+				onUri: async (generated) => {
+					ncUri = generated;
+					try {
+						ncQrSvg = await QRCode.toString(generated, {
+							type: 'svg',
+							errorCorrectionLevel: 'M',
+							margin: 1
+						});
+					} catch (e) {
+						console.warn('[clave.casa] QR render failed:', e);
+					}
+				},
+				onStage: (s, d) => {
+					if (s !== 'ready') {
+						stage = s;
+						stageDetail = d ?? '';
+					}
+				}
+			});
+			status = 'connecting';
+			startElapsedTimer();
+			finalizeConnection({
+				userPubkey,
+				bunkerUri: '' // nostrconnect flow doesn't have a stored bunker URI
+			});
+		} catch (e) {
+			if (ncAbort?.signal.aborted) return;
+			status = 'error';
+			errorMessage = e instanceof Error ? e.message : String(e);
+		}
+	}
+
+	async function handoffBunker(bunkerUri: string) {
 		const bp = await parseBunkerInput(bunkerUri);
 		if (!bp) {
 			status = 'error';
 			errorMessage = 'That doesn’t look like a valid bunker URI.';
 			return;
 		}
-
 		status = 'connecting';
 		stage = 'parsing';
 		stageDetail = '';
 		startElapsedTimer();
-
 		try {
 			const { userPubkey } = await connectSigner(
 				{ accountPubkey: bp.pubkey, bunkerUri, addedAt: Date.now() },
@@ -58,16 +128,7 @@
 					}
 				}
 			);
-			const conn: Connection = {
-				accountPubkey: userPubkey,
-				bunkerUri,
-				addedAt: Date.now()
-			};
-			upsertConnection(conn);
-			setActivePubkey(userPubkey);
-			window.dispatchEvent(new StorageEvent('storage', { key: 'clave-casa.activeAccount.v1' }));
-			stopElapsedTimer();
-			goto('/edit', { replaceState: true });
+			finalizeConnection({ userPubkey, bunkerUri });
 		} catch (e) {
 			stopElapsedTimer();
 			status = 'error';
@@ -75,54 +136,106 @@
 		}
 	}
 
+	function finalizeConnection({
+		userPubkey,
+		bunkerUri
+	}: {
+		userPubkey: string;
+		bunkerUri: string;
+	}) {
+		const conn: Connection = {
+			accountPubkey: userPubkey,
+			bunkerUri,
+			addedAt: Date.now()
+		};
+		upsertConnection(conn);
+		setActivePubkey(userPubkey);
+		window.dispatchEvent(new StorageEvent('storage', { key: 'clave-casa.activeAccount.v1' }));
+		stopElapsedTimer();
+		goto('/edit', { replaceState: true });
+	}
+
 	function submitPaste(event: Event) {
 		event.preventDefault();
 		const trimmed = pasted.trim();
 		if (!trimmed) return;
-		handoff(trimmed);
+		handoffBunker(trimmed);
+	}
+
+	function switchTab(next: Tab) {
+		if (tab === next) return;
+		tab = next;
+		errorMessage = '';
+		status = 'idle';
+		stopElapsedTimer();
+		if (next === 'qr' && !ncUri) {
+			startNostrConnectFlow();
+		} else if (next === 'paste') {
+			ncAbort?.abort();
+		}
+	}
+
+	async function copyNcUri() {
+		if (!ncUri) return;
+		try {
+			await navigator.clipboard.writeText(ncUri);
+			ncCopied = true;
+			if (ncCopyTimer) clearTimeout(ncCopyTimer);
+			ncCopyTimer = setTimeout(() => (ncCopied = false), 1600);
+		} catch (e) {
+			console.warn('[clave.casa] clipboard write failed:', e);
+		}
 	}
 
 	const stageLabel = $derived(
 		({
-			parsing: 'Parsing bunker URI',
-			'opening-relay': 'Opening relay connection',
-			'sending-connect': 'Sending connect request',
-			'awaiting-ack': 'Waiting for signer to acknowledge',
-			'fetching-pubkey': 'Fetching your pubkey',
+			parsing: 'Preparing',
+			'opening-relay': 'Opening relays',
+			'sending-connect': 'Sending connect',
+			'awaiting-ack': 'Waiting for signer',
+			'fetching-pubkey': 'Fetching pubkey',
 			ready: 'Ready'
-		}[stage ?? 'parsing'] ?? 'Working…')
+		}[stage ?? 'parsing'] ?? 'Working')
 	);
 </script>
 
-<div class="mx-auto max-w-md space-y-6 py-8">
+<div class="mx-auto max-w-md space-y-5 py-6">
 	<header class="space-y-2">
 		<h1 class="text-2xl font-semibold">Connect a signer</h1>
 		<p class="text-sm text-[var(--clave-text-muted)]">
-			Paste a bunker URI from Clave or any NIP-46 signer (Amber, nsec.app, …). Your private key
-			stays on the signer.
+			Sign in with a NIP-46 signer (Clave, Amber, nsec.app). Your private key never leaves the
+			signer.
 		</p>
 	</header>
 
-	{#if status === 'connecting'}
-		<div
-			class="space-y-3 rounded-2xl border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] p-4 text-sm"
+	<!-- Tabs -->
+	<div
+		class="grid grid-cols-2 gap-1 rounded-full border border-[var(--clave-border)] bg-[var(--clave-surface)] p-1"
+	>
+		<button
+			type="button"
+			onclick={() => switchTab('qr')}
+			class="rounded-full px-3 py-2 text-sm font-medium transition-colors"
+			class:bg-clave-tint={tab === 'qr'}
+			class:active-tab={tab === 'qr'}
 		>
-			<div class="flex items-center justify-between">
-				<p class="font-semibold">{stageLabel}…</p>
-				<StatusPill tone="pending">{elapsedSec}s</StatusPill>
-			</div>
-			{#if stageDetail}
-				<p class="font-mono text-xs text-[var(--clave-text-muted)]">{stageDetail}</p>
-			{/if}
-			<p class="text-xs text-[var(--clave-text-muted)]">
-				If your signer prompts for approval, accept on that device. Times out at 45s.
-			</p>
-		</div>
-	{:else if status === 'error'}
-		<div
-			class="rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100"
+			Scan QR
+		</button>
+		<button
+			type="button"
+			onclick={() => switchTab('paste')}
+			class="rounded-full px-3 py-2 text-sm font-medium transition-colors"
+			class:active-tab={tab === 'paste'}
 		>
-			<p class="font-medium">Couldn&apos;t connect</p>
+			Paste URI
+		</button>
+	</div>
+
+	{#if status === 'error'}
+		<div
+			class="rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-900"
+		>
+			<p class="font-medium">Couldn’t connect</p>
 			<p class="mt-1 whitespace-pre-line">{errorMessage}</p>
 			<button
 				type="button"
@@ -130,35 +243,137 @@
 				onclick={() => {
 					status = 'idle';
 					errorMessage = '';
+					if (tab === 'qr') startNostrConnectFlow();
 				}}>Try again</button
 			>
 		</div>
+	{:else if tab === 'qr'}
+		<div
+			class="space-y-4 rounded-2xl border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] p-4"
+		>
+			<p class="text-sm text-[var(--clave-text-muted)]">
+				Open your NIP-46 signer and scan this QR code, or copy the connect string into the
+				signer’s remote-login field.
+			</p>
+			<div class="flex justify-center">
+				{#if ncQrSvg}
+					<div class="rounded-2xl bg-white p-3 shadow-sm">
+						{@html ncQrSvg.replace('<svg ', '<svg class="h-56 w-56" ')}
+					</div>
+				{:else}
+					<div class="flex h-56 w-56 items-center justify-center rounded-2xl bg-[var(--clave-surface)]">
+						<p class="text-xs text-[var(--clave-text-muted)]">Generating…</p>
+					</div>
+				{/if}
+			</div>
+			{#if ncUri}
+				<button
+					type="button"
+					onclick={copyNcUri}
+					title="Copy connect string"
+					class="flex w-full items-center justify-between gap-2 rounded-xl border border-[var(--clave-border)] bg-[var(--clave-surface)] px-3 py-2 text-left font-mono text-xs text-[var(--clave-text-muted)] hover:text-[var(--clave-tint)]"
+				>
+					<span class="truncate">{ncUri}</span>
+					{#if ncCopied}
+						<svg viewBox="0 0 16 16" class="h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden="true">
+							<path
+								d="M3 8.5l3.5 3.5 6.5-7"
+								stroke="currentColor"
+								stroke-width="2"
+								fill="none"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
+						</svg>
+					{:else}
+						<svg viewBox="0 0 16 16" class="h-3.5 w-3.5 shrink-0 opacity-50" aria-hidden="true">
+							<rect
+								x="4.5"
+								y="4.5"
+								width="7"
+								height="9"
+								rx="1.5"
+								stroke="currentColor"
+								stroke-width="1.4"
+								fill="none"
+							/>
+							<path
+								d="M6.5 4.5V3a1 1 0 011-1h4a1 1 0 011 1v8a1 1 0 01-1 1h-1.5"
+								stroke="currentColor"
+								stroke-width="1.4"
+								fill="none"
+								stroke-linecap="round"
+							/>
+						</svg>
+					{/if}
+				</button>
+			{/if}
+			<div class="flex items-center gap-2 rounded-xl bg-[var(--clave-surface)] px-3 py-2 text-xs">
+				<span class="inline-block h-2 w-2 animate-pulse rounded-full bg-[var(--clave-tint)]"></span>
+				<span class="flex-1">
+					{#if status === 'connecting'}
+						{stageLabel}…
+					{:else}
+						Waiting for your signer to scan or paste this URI…
+					{/if}
+				</span>
+				{#if elapsedSec > 0}
+					<StatusPill tone="pending">{elapsedSec}s</StatusPill>
+				{/if}
+			</div>
+		</div>
 	{:else}
-		<form onsubmit={submitPaste} class="space-y-3">
-			<label class="block">
-				<span class="text-sm font-semibold">Bunker URI</span>
-				<textarea
-					bind:value={pasted}
-					rows="3"
-					placeholder="bunker://&lt;pubkey&gt;?relay=wss://&hellip;&amp;secret=&hellip;"
-					class="mt-1.5 block w-full rounded-xl border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] px-3.5 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[var(--clave-tint)]/40"
-				></textarea>
-			</label>
-			<button
-				type="submit"
-				class="w-full rounded-xl bg-[var(--clave-tint)] px-4 py-2.5 text-sm font-semibold text-[var(--clave-tint-fg)] hover:opacity-90"
-			>
-				Connect
-			</button>
-		</form>
-
-		<details class="text-sm text-[var(--clave-text-muted)]">
-			<summary class="cursor-pointer">Where do I get a bunker URI?</summary>
-			<ul class="ml-4 mt-2 list-disc space-y-1">
-				<li><strong>Clave (iOS):</strong> tap your account, then “Connect a client” to copy a bunker URI.</li>
-				<li><strong>Amber (Android):</strong> in app settings, generate a bunker URI for clave.casa.</li>
-				<li><strong>nsec.app:</strong> create or import a key, then copy a bunker URI.</li>
-			</ul>
-		</details>
+		<div
+			class="space-y-4 rounded-2xl border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] p-4"
+		>
+			{#if status === 'connecting'}
+				<div class="space-y-2">
+					<div class="flex items-center justify-between">
+						<p class="font-semibold">{stageLabel}…</p>
+						<StatusPill tone="pending">{elapsedSec}s</StatusPill>
+					</div>
+					{#if stageDetail}
+						<p class="font-mono text-xs text-[var(--clave-text-muted)]">{stageDetail}</p>
+					{/if}
+					<p class="text-xs text-[var(--clave-text-muted)]">
+						If your signer prompts for approval, accept on that device.
+					</p>
+				</div>
+			{:else}
+				<form onsubmit={submitPaste} class="space-y-3">
+					<label class="block">
+						<span class="text-sm font-semibold">Bunker URI</span>
+						<textarea
+							bind:value={pasted}
+							rows="3"
+							placeholder="bunker://&lt;pubkey&gt;?relay=wss://&hellip;&amp;secret=&hellip;"
+							class="mt-1.5 block w-full rounded-xl border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] px-3.5 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[var(--clave-tint)]/40"
+						></textarea>
+					</label>
+					<button
+						type="submit"
+						class="w-full rounded-xl bg-[var(--clave-tint)] px-4 py-2.5 text-sm font-semibold text-[var(--clave-tint-fg)] hover:opacity-90"
+					>
+						Connect
+					</button>
+				</form>
+			{/if}
+		</div>
 	{/if}
+
+	<details class="text-sm text-[var(--clave-text-muted)]">
+		<summary class="cursor-pointer">Need a signer?</summary>
+		<ul class="ml-4 mt-2 list-disc space-y-1">
+			<li><strong>Clave</strong> (iOS) — tap your account, then “Connect a client”.</li>
+			<li><strong>Amber</strong> (Android) — in app settings, generate a bunker URI.</li>
+			<li><strong>nsec.app</strong> — create or import a key, then copy a bunker URI.</li>
+		</ul>
+	</details>
 </div>
+
+<style>
+	.active-tab {
+		background: var(--clave-tint);
+		color: var(--clave-tint-fg);
+	}
+</style>
