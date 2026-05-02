@@ -217,7 +217,6 @@
 			type="button"
 			onclick={() => switchTab('qr')}
 			class="rounded-full px-3 py-2 text-sm font-medium transition-colors"
-			class:bg-clave-tint={tab === 'qr'}
 			class:active-tab={tab === 'qr'}
 		>
 			Scan QR
