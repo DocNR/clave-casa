@@ -23,6 +23,7 @@
 	import Avatar from '$lib/components/Avatar.svelte';
 	import FormSectionCard from '$lib/components/FormSectionCard.svelte';
 	import { copyToClipboard } from '$lib/clipboard';
+	import { defaultAvatarUrl } from '$lib/avatar-defaults';
 
 	// Kind 0 metadata fields per NIP-01 (name, about, picture) +
 	// NIP-24 (display_name, website, banner, bot) + NIP-05 (nip05) +
@@ -198,7 +199,16 @@
 		// them on save. Canonical names from `fields` win.
 		const cleanExtras: Record<string, unknown> = { ...extraFields };
 		for (const dep of Object.keys(DEPRECATED_ALIASES)) delete cleanExtras[dep];
-		const content = JSON.stringify({ ...cleanExtras, ...stripEmpty(fields) });
+
+		// If the user hasn't set a picture, default to their per-account
+		// Robohash so the kind 0 actually publishes a picture URL — other
+		// clients then render the same robot we render locally, instead of
+		// falling back to their own default avatar.
+		const fieldsToPublish: ProfileFields = {
+			...fields,
+			picture: fields.picture || defaultAvatarUrl(userPubkey)
+		};
+		const content = JSON.stringify({ ...cleanExtras, ...stripEmpty(fieldsToPublish) });
 		try {
 			const signed = await signEventViaBunker(
 				{
@@ -227,9 +237,11 @@
 
 			// Update Connection metadata so the AccountSwitcher and other
 			// surfaces pick up the new label/PFP without needing a refresh.
+			// The picture we save is whatever we just published — including
+			// the Robohash default if the user left it blank.
 			if (conn) {
 				const newLabel = fields.display_name || fields.name || conn.label;
-				const newPicture = fields.picture || conn.pictureUrl;
+				const newPicture = fieldsToPublish.picture || conn.pictureUrl;
 				if (newLabel !== conn.label || newPicture !== conn.pictureUrl) {
 					const updated = { ...conn, label: newLabel, pictureUrl: newPicture };
 					upsertConnection(updated);
@@ -587,7 +599,10 @@
 				label={fields.display_name || fields.name}
 				picture={editingPictureUrl}
 			/>
-			<p class="text-xs">Live preview. The Robohash robot shows when this is empty.</p>
+			<p class="text-xs">
+				Live preview. Leaving this blank publishes the per-account Robohash robot as your kind
+				0 picture, so other clients show the same robot.
+			</p>
 		</div>
 		<label class="mt-4 block">
 			<span class="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Picture URL</span>
@@ -605,8 +620,8 @@
 			/>
 		</label>
 		<p class="mt-2 text-xs">
-			Leave blank to fall back to the deterministic Robohash robot. Changes save when you click
-			<strong>Save &amp; publish</strong> below.
+			Leaving this blank auto-fills the Robohash URL on Save & publish — your kind 0 will
+			carry that URL so other clients render the same robot.
 		</p>
 		<div class="mt-5 flex justify-end gap-2">
 			<button

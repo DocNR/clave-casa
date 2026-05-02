@@ -1,7 +1,7 @@
 <!-- src/lib/components/Avatar.svelte -->
 <script lang="ts">
-	import { npubEncode } from 'nostr-tools/nip19';
 	import { themeForPubkey, gradientCss, fgForHex } from '$lib/theme';
+	import { defaultAvatarUrl } from '$lib/avatar-defaults';
 
 	type Size = 'sm' | 'md' | 'lg' | 'xl';
 
@@ -21,18 +21,10 @@
 
 	// Render priority:
 	//   1. User's kind 0 `picture` URL, if set.
-	//   2. Robohash deterministic robot keyed on the npub — same for every
-	//      client that uses this convention. Privacy note: the npub is
-	//      already public; sending it to robohash.org is no worse than
-	//      sending it to any relay.
+	//   2. Robohash deterministic robot via defaultAvatarUrl(pubkey) — the
+	//      same URL we auto-save to kind 0 on publish, so the visual here
+	//      matches what other clients show after the first publish.
 	//   3. If both fail to load, fall back to the gradient + initial.
-	function robohashFallback(hex: string): string {
-		try {
-			return `https://robohash.org/${npubEncode(hex)}?size=200x200`;
-		} catch {
-			return '';
-		}
-	}
 
 	let imgFailed = $state(false);
 	const theme = $derived(themeForPubkey(pubkey));
@@ -41,7 +33,7 @@
 		(label ?? '').trim().slice(0, 1).toUpperCase() || pubkey.slice(0, 1).toUpperCase()
 	);
 	const fg = $derived(fgForHex(theme.start));
-	const effectivePicture = $derived(picture || robohashFallback(pubkey));
+	const effectivePicture = $derived(picture || defaultAvatarUrl(pubkey));
 	const showImage = $derived(!!effectivePicture && !imgFailed);
 
 	// Reset failure state when the underlying account or picture changes.
