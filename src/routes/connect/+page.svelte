@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { upsertConnection, type Connection } from '$lib/connections';
 	import { connectSigner, parseBunkerInput, type ConnectStage } from '$lib/signer';
+	import StatusPill from '$lib/components/StatusPill.svelte';
 
 	let pasted = $state('');
 	let status: 'idle' | 'connecting' | 'error' = $state('idle');
@@ -102,22 +103,22 @@
 
 	{#if status === 'connecting'}
 		<div
-			class="space-y-3 rounded-md border border-neutral-200 bg-white p-4 text-sm dark:border-neutral-800 dark:bg-neutral-900"
+			class="space-y-3 rounded-2xl border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] p-4 text-sm"
 		>
 			<div class="flex items-center justify-between">
-				<p class="font-medium">{stageLabel}…</p>
-				<span class="font-mono text-xs text-neutral-500">{elapsedSec}s</span>
+				<p class="font-semibold">{stageLabel}…</p>
+				<StatusPill tone="pending">{elapsedSec}s</StatusPill>
 			</div>
 			{#if stageDetail}
-				<p class="font-mono text-xs text-neutral-500">{stageDetail}</p>
+				<p class="font-mono text-xs text-[var(--clave-text-muted)]">{stageDetail}</p>
 			{/if}
-			<p class="text-xs text-neutral-500">
+			<p class="text-xs text-[var(--clave-text-muted)]">
 				If your signer prompts for approval, accept on that device. Times out at 45s.
 			</p>
 		</div>
 	{:else if status === 'error'}
 		<div
-			class="rounded-md border border-red-300 bg-red-50 p-4 text-sm text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100"
+			class="rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100"
 		>
 			<p class="font-medium">Couldn&apos;t connect</p>
 			<p class="mt-1 whitespace-pre-line">{errorMessage}</p>
@@ -133,17 +134,17 @@
 	{:else}
 		<form onsubmit={submitPaste} class="space-y-3">
 			<label class="block">
-				<span class="text-sm font-medium">Bunker URI</span>
+				<span class="text-sm font-semibold">Bunker URI</span>
 				<textarea
 					bind:value={pasted}
 					rows="3"
 					placeholder="bunker://&lt;pubkey&gt;?relay=wss://&hellip;&amp;secret=&hellip;"
-					class="mt-1 block w-full rounded-md border border-neutral-300 bg-white px-3 py-2 font-mono text-sm dark:border-neutral-700 dark:bg-neutral-900"
+					class="mt-1.5 block w-full rounded-xl border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] px-3.5 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[var(--clave-tint)]/40"
 				></textarea>
 			</label>
 			<button
 				type="submit"
-				class="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+				class="w-full rounded-xl bg-[var(--clave-tint)] px-4 py-2.5 text-sm font-semibold text-[var(--clave-tint-fg)] hover:opacity-90"
 			>
 				Connect
 			</button>
