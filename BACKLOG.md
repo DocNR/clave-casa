@@ -31,6 +31,7 @@ Open work, ordered roughly by priority.
 - [ ] **Upstream PR/issue on nostr-tools** — `BunkerSigner.signEvent` resolves on the first response and ignores the `permission denied → signed event` two-stage pattern. Our `signEventViaBunker` works around it; getting it merged upstream would let us delete that custom code.
 - [ ] **Automated tests** — currently zero test coverage. Worth at least: SHA-256 → palette index parity vs iOS, deprecated alias migration logic, three-tier publish report shape.
 - [ ] **Bundle size budget** — track final gzipped size; consider code-splitting `qrcode` so it only loads on `/connect`.
+- [ ] **Investigate "invalid string" reconnect failure** — observed 2026-05-02: existing-account Save threw a generic "invalid string" on `connectSigner`; recovered by signing out + re-pairing via `/connect`. Root cause unconfirmed. Likely candidates: corrupted `clave-casa.localKey.<bunker-pubkey>` entry, stale bunker secret after iOS-side rotation, or `parseBunkerInput` regression. **Next time it happens:** capture full DevTools console stack + screenshot the `clave-casa.*` localStorage keys before re-pairing. Consider wrapping the signer connect path with more descriptive error mapping (so the surface message names which input failed to parse).
 
 ## Smoke checklist (verify on real device after deploy)
 
