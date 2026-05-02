@@ -65,3 +65,24 @@ export function fgForHex(hex: string): string {
 export function gradientCss(theme: AccountTheme): string {
 	return `linear-gradient(135deg, ${theme.start}, ${theme.end})`;
 }
+
+// Convert a #RRGGBB hex to an `rgb(r g b / alpha)` string for translucent
+// surfaces. Alpha is 0..1.
+export function hexToRgba(hex: string, alpha: number): string {
+	const m = hex.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+	if (!m) return `rgb(0 0 0 / ${alpha})`;
+	const r = parseInt(m[1], 16);
+	const g = parseInt(m[2], 16);
+	const b = parseInt(m[3], 16);
+	return `rgb(${r} ${g} ${b} / ${alpha})`;
+}
+
+// Build the page-background ambient gradient CSS for the active account.
+// 135° matches the avatar gradient direction. Alphas tuned for visibility
+// without overwhelming foreground text (light mode pulls a bit more saturation,
+// dark mode stays subtle so near-black surfaces don't get muddied).
+export function ambientGradientCss(theme: AccountTheme, scheme: 'light' | 'dark'): string {
+	const startAlpha = scheme === 'light' ? 0.14 : 0.1;
+	const endAlpha = scheme === 'light' ? 0.1 : 0.06;
+	return `linear-gradient(135deg, ${hexToRgba(theme.start, startAlpha)}, ${hexToRgba(theme.end, endAlpha)})`;
+}

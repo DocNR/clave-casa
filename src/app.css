@@ -45,3 +45,16 @@ h2,
 h3 {
 	letter-spacing: -0.01em;
 }
+
+/* Per-account ambient background. Set at runtime by +layout.svelte's
+   $effect when an account is active. When unset (no active account),
+   body falls back to its base bg-neutral-* class. */
+body::before {
+	content: '';
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	background: var(--clave-ambient, transparent);
+	transition: background 300ms ease;
+}

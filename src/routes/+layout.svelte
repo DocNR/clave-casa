@@ -3,18 +3,28 @@
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import AccountSwitcher from '$lib/components/AccountSwitcher.svelte';
-	import { themeForPubkey, fgForHex } from '$lib/theme';
+	import { themeForPubkey, fgForHex, ambientGradientCss } from '$lib/theme';
 	import { onMount } from 'svelte';
 	import { getActivePubkey } from '$lib/connections';
 
 	let { children } = $props();
 	let activePubkey = $state<string | undefined>(undefined);
+	let colorScheme: 'light' | 'dark' = $state('light');
 
 	onMount(() => {
 		const refresh = () => (activePubkey = getActivePubkey());
 		refresh();
 		window.addEventListener('storage', refresh);
-		return () => window.removeEventListener('storage', refresh);
+
+		const mql = window.matchMedia('(prefers-color-scheme: dark)');
+		const updateScheme = () => (colorScheme = mql.matches ? 'dark' : 'light');
+		updateScheme();
+		mql.addEventListener('change', updateScheme);
+
+		return () => {
+			window.removeEventListener('storage', refresh);
+			mql.removeEventListener('change', updateScheme);
+		};
 	});
 
 	$effect(() => {
@@ -22,11 +32,13 @@
 		if (!activePubkey) {
 			root.style.removeProperty('--clave-tint');
 			root.style.removeProperty('--clave-tint-fg');
+			root.style.removeProperty('--clave-ambient');
 			return;
 		}
 		const theme = themeForPubkey(activePubkey);
 		root.style.setProperty('--clave-tint', theme.accent);
 		root.style.setProperty('--clave-tint-fg', fgForHex(theme.accent));
+		root.style.setProperty('--clave-ambient', ambientGradientCss(theme, colorScheme));
 	});
 </script>
 
