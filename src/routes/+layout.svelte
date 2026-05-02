@@ -46,7 +46,11 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-<div class="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
+<div class="relative min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
+	<!-- Ambient gradient overlay (per-active-account). Sits above the
+	     wrapper's solid bg-neutral-* and below the sticky header + main
+	     content. Switches via $effect on activePubkey / colorScheme. -->
+	<div class="clave-ambient-layer" aria-hidden="true"></div>
 	<header
 		class="sticky top-0 z-20 border-b border-[var(--clave-border)] bg-[var(--clave-surface)] backdrop-blur-xl"
 	>
@@ -55,7 +59,7 @@
 			<AccountSwitcher />
 		</div>
 	</header>
-	<main class="mx-auto max-w-3xl px-4 py-6">
+	<main class="relative z-10 mx-auto max-w-3xl px-4 py-6">
 		{@render children?.()}
 	</main>
 </div>

@@ -46,15 +46,15 @@ h3 {
 	letter-spacing: -0.01em;
 }
 
-/* Per-account ambient background. Set at runtime by +layout.svelte's
-   $effect when an account is active. When unset (no active account),
-   body falls back to its base bg-neutral-* class. */
-body::before {
-	content: '';
+/* Per-account ambient background overlay. Rendered as a fixed full-screen
+   element by +layout.svelte, sitting on top of the wrapper's bg-neutral-*
+   base layer but below the actual page content. The base + the gradient
+   blend visually because the gradient uses translucent stops. */
+.clave-ambient-layer {
 	position: fixed;
 	inset: 0;
-	z-index: -1;
 	pointer-events: none;
 	background: var(--clave-ambient, transparent);
 	transition: background 300ms ease;
+	z-index: 0;
 }
