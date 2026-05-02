@@ -75,41 +75,49 @@ foundation.
 
 ## Visual identity
 
-### Color palette (lifted from Clave iOS)
+### Color palette (lifted verbatim from Clave iOS `AccountTheme.swift`)
 
-12 deterministic gradients indexed by `hash(pubkey) mod 12`:
+12 deterministic gradients indexed by `index(pubkey) mod 12`. Hex values are
+the exact RGB from iOS converted to 8-bit (`Color(red:r, green:g, blue:b)` →
+`#RRGGBB` with `int(component * 255)`):
 
-| Index | Name | Start | End | Accent (button color) |
+| Index | Name | Start | End | Accent |
 |---|---|---|---|---|
-| 0 | Violet | `#7B8DFF` | `#A04AFF` | `#5A2DFF` |
-| 1 | Teal | `#00C7FF` | `#2EFFB5` | `#005A66` |
-| 2 | Coral | `#FF8D4A` | `#FFC24A` | `#C75A00` |
+| 0 | Violet | `#7A8CFF` | `#A14AFF` | `#592EFF` |
+| 1 | Teal | `#00C7FF` | `#2EFFB5` | `#005966` |
+| 2 | Coral | `#FF8C4A` | `#FFC24A` | `#C75900` |
 | 3 | Magenta | `#FF4A8C` | `#FF78A8` | `#C71A66` |
-| 4 | Sky | `#4AA3FF` | `#4AE7FF` | `#1A73D9` |
-| 5 | Lime | `#4AFF8C` | `#C2FF4A` | `#1A8D33` |
+| 4 | Sky | `#4AA3FF` | `#4AE8FF` | `#1A73D9` |
+| 5 | Lime | `#4AFF8C` | `#C2FF4A` | `#1A8C33` |
 | 6 | Red | `#FF6B6B` | `#FF9E4F` | `#C72E2E` |
-| 7 | Fuchsia | `#8D4AFF` | `#EE6BFF` | `#6B1AC7` |
-| 8 | Emerald | `#19C799` | `#66ED66` | `#0D664D` |
-| 9 | Orchid | `#C76EED` | `#FF8DC7` | `#8D2DB6` |
-| 10 | Navy | `#4A6BD9` | `#8DB5FF` | `#1A3AA8` |
-| 11 | Peach | `#FF6BB6` | `#FFB56B` | `#C73473` |
+| 7 | Fuchsia | `#8C4AFF` | `#ED6BFF` | `#661AC7` |
+| 8 | Emerald | `#1AC799` | `#66ED66` | `#0D664D` |
+| 9 | Orchid | `#C76BED` | `#FF8CC7` | `#8C2EB5` |
+| 10 | Navy | `#4A6BD9` | `#8CB5FF` | `#1A33A6` |
+| 11 | Peach | `#FF6BB5` | `#FFB56B` | `#C73373` |
 
-### Hash → index function
+### Hash → index function (canonical from iOS)
 
-Same algorithm as Clave iOS:
+The iOS implementation at `~/clave/Clave/Shared/AccountTheme.swift` uses
+SHA-256, not byte-sum. We match it 1:1:
 
 ```ts
+import { sha256 } from '@noble/hashes/sha2';
+
 export function gradientIndexForPubkey(hexPubkey: string): number {
-  let sum = 0;
-  for (let i = 0; i < 64; i += 2) {
-    sum += parseInt(hexPubkey.slice(i, i + 2), 16);
-  }
-  return sum % 12;
+  const normalized = hexPubkey.toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(normalized)) return 0; // defensive fallback to palette[0]
+  const digest = sha256(new TextEncoder().encode(normalized));
+  // First 2 bytes as a uint16, mod palette count.
+  return ((digest[0] << 8) | digest[1]) % 12;
 }
 ```
 
-Stable across devices: same npub → same gradient on iOS, on web, on any future
-client we build.
+(`@noble/hashes` ships as a transitive dep of `nostr-tools`; no new install
+required.)
+
+Stable across devices: same npub → same gradient on iOS, on web, on any
+future client we build.
 
 ### Spacing & radii scale
 
@@ -241,8 +249,8 @@ None blocking implementation. Future-pass questions parked:
 
 - Should the per-account tint propagate to more surfaces (links, focus
   rings, header underline)? Right now only the primary button uses it.
-- Should we hash the pubkey via SHA-256 instead of byte-sum? (Byte-sum
-  matches iOS exactly; SHA-256 would be slightly more "uniformly
-  distributed" but breaks parity with iOS.)
+- ~~Should we hash the pubkey via SHA-256 instead of byte-sum?~~ Resolved:
+  SHA-256 is what iOS actually uses (see `AccountTheme.swift`); spec
+  updated to match.
 - Should the avatar gradient angle be configurable? Clave iOS uses 135°
   (top-left → bottom-right); we'll match.
