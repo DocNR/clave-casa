@@ -320,18 +320,6 @@
 			</div>
 		{/if}
 
-		{#if !nip65Present}
-			<div
-				class="rounded-2xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100"
-			>
-				<p class="font-medium">No relay list (NIP-65) found.</p>
-				<p class="mt-1">
-					Your profile will only reach our default broadcast set until you tell Nostr where you
-					write. The relay list editor is coming in phase 2.
-				</p>
-			</div>
-		{/if}
-
 		{#if approvalWait}
 			<div
 				class="flex items-start gap-3 rounded-2xl border border-blue-300 bg-blue-50 p-3 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-100"
@@ -383,6 +371,30 @@
 				/>
 				<Field label="Website" placeholder="https://…" bind:value={fields.website} type="url" />
 			</FormSectionCard>
+
+			{#if !nip65Present}
+				<div
+					class="flex items-start gap-2 rounded-2xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100"
+				>
+					<svg viewBox="0 0 16 16" class="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true">
+						<path
+							d="M8 1.5l7 12.5H1L8 1.5zm0 4.5v4m0 2v.5"
+							stroke="currentColor"
+							stroke-width="1.4"
+							fill="none"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
+					</svg>
+					<div>
+						<p class="font-medium">No relay list (NIP-65) found.</p>
+						<p class="mt-0.5 text-xs">
+							Your profile will only reach the default broadcast set until you tell Nostr where you
+							write. The relay list editor is coming in phase 2.
+						</p>
+					</div>
+				</div>
+			{/if}
 
 			<div class="flex items-center gap-3 pt-2">
 				<button
