@@ -59,16 +59,32 @@
 	let approvalElapsedSec = $state(0);
 	let approvalTickInterval: ReturnType<typeof setInterval> | undefined;
 
-	onMount(async () => {
-		conn = getActiveConnection();
-		if (!conn) {
+	// Track which account we've loaded so storage events that don't actually
+	// change the active account don't trigger pointless reloads.
+	let loadedPubkey: string | undefined = undefined;
+
+	async function loadForActiveAccount() {
+		const newConn = getActiveConnection();
+		if (!newConn) {
 			goto('/connect', { replaceState: true });
 			return;
 		}
-		// Use the stored accountPubkey directly — no need to wake the signer
-		// just to look up our own pubkey. Save() lazily connects the signer
-		// when the user actually wants to publish.
-		userPubkey = conn.accountPubkey;
+		if (loadedPubkey === newConn.accountPubkey) return;
+
+		// Reset state for the new account so the form doesn't show stale data
+		// during the relay fetch.
+		conn = newConn;
+		userPubkey = newConn.accountPubkey;
+		loadedPubkey = newConn.accountPubkey;
+		fields = { ...empty };
+		extraFields = {};
+		publishReport = undefined;
+		scanReport = undefined;
+		lastSavedEvent = undefined;
+		clearApprovalTick();
+		loadError = '';
+		phase = 'loading';
+
 		try {
 			await loadProfile();
 		} catch (e) {
@@ -76,6 +92,13 @@
 		} finally {
 			phase = 'editing';
 		}
+	}
+
+	onMount(() => {
+		void loadForActiveAccount();
+		const onStorage = () => void loadForActiveAccount();
+		window.addEventListener('storage', onStorage);
+		return () => window.removeEventListener('storage', onStorage);
 	});
 
 	async function loadProfile() {
