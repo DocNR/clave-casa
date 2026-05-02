@@ -78,11 +78,14 @@ export function hexToRgba(hex: string, alpha: number): string {
 }
 
 // Build the page-background ambient gradient CSS for the active account.
-// 135° matches the avatar gradient direction. Alphas: visible enough to
-// read as "this account's color is X" at a glance, but not so saturated
-// the foreground text loses contrast.
+// 135° matches the avatar gradient direction. Alphas tuned to give the
+// Primal-style ambient wash — clearly the account's color, not a hint.
+// Light mode blends saturated palette stops with the near-white wrapper
+// to produce pastels (e.g., Sky #4AA3FF at 0.55 over neutral-50 yields
+// a clear lavender-blue). Dark mode pulls back so near-black surfaces
+// don't get muddied.
 export function ambientGradientCss(theme: AccountTheme, scheme: 'light' | 'dark'): string {
-	const startAlpha = scheme === 'light' ? 0.32 : 0.22;
-	const endAlpha = scheme === 'light' ? 0.22 : 0.14;
+	const startAlpha = scheme === 'light' ? 0.6 : 0.38;
+	const endAlpha = scheme === 'light' ? 0.42 : 0.24;
 	return `linear-gradient(135deg, ${hexToRgba(theme.start, startAlpha)}, ${hexToRgba(theme.end, endAlpha)})`;
 }
