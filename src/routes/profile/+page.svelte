@@ -23,6 +23,10 @@
 	import Avatar from '$lib/components/Avatar.svelte';
 	import FormSectionCard from '$lib/components/FormSectionCard.svelte';
 
+	// Kind 0 metadata fields per NIP-01 (name, about, picture) +
+	// NIP-24 (display_name, website, banner, bot) + NIP-05 (nip05) +
+	// Lightning conventions (lud16). Unknown fields are preserved in
+	// extraFields so we don't strip custom data clients have set elsewhere.
 	type ProfileFields = {
 		name: string;
 		display_name: string;
@@ -32,6 +36,7 @@
 		nip05: string;
 		lud16: string;
 		website: string;
+		bot: boolean;
 	};
 
 	const empty: ProfileFields = {
@@ -42,7 +47,16 @@
 		about: '',
 		nip05: '',
 		lud16: '',
-		website: ''
+		website: '',
+		bot: false
+	};
+
+	// Deprecated kind 0 keys we migrate into the canonical names per NIP-24:
+	//   displayName → display_name, username → name. We drop the deprecated
+	//   keys on save instead of letting them ride in extraFields.
+	const DEPRECATED_ALIASES: Record<string, keyof ProfileFields> = {
+		displayName: 'display_name',
+		username: 'name'
 	};
 
 	let conn = $state<Connection | undefined>(undefined);
@@ -107,7 +121,7 @@
 		if (!event) return;
 		try {
 			const parsed = JSON.parse(event.content) as Record<string, unknown>;
-			const known: (keyof ProfileFields)[] = [
+			const stringKeys = new Set<keyof ProfileFields>([
 				'name',
 				'display_name',
 				'picture',
@@ -116,12 +130,21 @@
 				'nip05',
 				'lud16',
 				'website'
-			];
+			]);
 			const next = { ...empty };
 			const extras: Record<string, unknown> = {};
 			for (const [k, v] of Object.entries(parsed)) {
-				if (known.includes(k as keyof ProfileFields) && typeof v === 'string') {
-					next[k as keyof ProfileFields] = v;
+				// Migrate deprecated aliases (NIP-24) into canonical names. Only
+				// adopt if the canonical key isn't already set in this kind 0.
+				if (k in DEPRECATED_ALIASES && typeof v === 'string') {
+					const canonical = DEPRECATED_ALIASES[k];
+					if (!next[canonical]) (next as Record<string, unknown>)[canonical] = v;
+					continue;
+				}
+				if (stringKeys.has(k as keyof ProfileFields) && typeof v === 'string') {
+					(next as Record<string, unknown>)[k] = v;
+				} else if (k === 'bot' && typeof v === 'boolean') {
+					next.bot = v;
 				} else {
 					extras[k] = v;
 				}
@@ -170,7 +193,11 @@
 		clearApprovalTick();
 		loadError = '';
 
-		const content = JSON.stringify({ ...extraFields, ...stripEmpty(fields) });
+		// Drop deprecated NIP-24 aliases from extras so we don't perpetuate
+		// them on save. Canonical names from `fields` win.
+		const cleanExtras: Record<string, unknown> = { ...extraFields };
+		for (const dep of Object.keys(DEPRECATED_ALIASES)) delete cleanExtras[dep];
+		const content = JSON.stringify({ ...cleanExtras, ...stripEmpty(fields) });
 		try {
 			const signed = await signEventViaBunker(
 				{
@@ -220,7 +247,11 @@
 		const out: Partial<ProfileFields> = {};
 		for (const [k, v] of Object.entries(obj)) {
 			if (typeof v === 'string' && v.length > 0) {
-				out[k as keyof ProfileFields] = v;
+				(out as Record<string, unknown>)[k] = v;
+			} else if (k === 'bot' && v === true) {
+				// Only emit bot when true — saves bytes and matches convention
+				// of clients that omit the field for human accounts.
+				out.bot = true;
 			}
 		}
 		return out;
@@ -370,6 +401,23 @@
 					bind:value={fields.lud16}
 				/>
 				<Field label="Website" placeholder="https://…" bind:value={fields.website} type="url" />
+			</FormSectionCard>
+
+			<FormSectionCard label="Account type">
+				<label class="flex cursor-pointer items-start gap-3">
+					<input
+						type="checkbox"
+						bind:checked={fields.bot}
+						class="mt-0.5 h-4 w-4 rounded border-[var(--clave-border)] accent-[var(--clave-tint)]"
+					/>
+					<div class="text-sm">
+						<span class="font-semibold">This account is a bot</span>
+						<p class="text-xs text-[var(--clave-text-muted)]">
+							Mark when content is wholly or partially produced by automation. Helps clients
+							label feeds correctly (NIP-24).
+						</p>
+					</div>
+				</label>
 			</FormSectionCard>
 
 			{#if !nip65Present}
