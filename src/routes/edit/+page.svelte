@@ -280,6 +280,25 @@
 	let npubCopied = $state(false);
 	let npubCopyTimer: ReturnType<typeof setTimeout> | undefined;
 
+	// Picture URL editor — opened by the pencil overlay on the avatar.
+	let pictureDialog: HTMLDialogElement | undefined = $state();
+	let editingPictureUrl = $state('');
+	let pictureEditorOpen = $state(false);
+
+	$effect(() => {
+		if (pictureEditorOpen && pictureDialog && !pictureDialog.open) {
+			editingPictureUrl = fields.picture;
+			pictureDialog.showModal();
+		} else if (!pictureEditorOpen && pictureDialog?.open) {
+			pictureDialog.close();
+		}
+	});
+
+	function applyPictureEdit() {
+		fields.picture = editingPictureUrl.trim();
+		pictureEditorOpen = false;
+	}
+
 	async function copyNpub() {
 		if (!npub) return;
 		try {
@@ -298,12 +317,32 @@
 {:else}
 	<div class="space-y-6">
 		<header class="flex items-center gap-4 py-2">
-			<Avatar
-				pubkey={userPubkey}
-				size="xl"
-				label={fields.display_name || fields.name}
-				picture={fields.picture}
-			/>
+			<div class="relative shrink-0">
+				<Avatar
+					pubkey={userPubkey}
+					size="xl"
+					label={fields.display_name || fields.name}
+					picture={fields.picture}
+				/>
+				<button
+					type="button"
+					onclick={() => (pictureEditorOpen = true)}
+					title="Edit picture URL"
+					aria-label="Edit picture URL"
+					class="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full border border-[var(--clave-surface-alt)] bg-[var(--clave-tint)] text-[var(--clave-tint-fg)] shadow-sm hover:opacity-90"
+				>
+					<svg viewBox="0 0 16 16" class="h-2.5 w-2.5" aria-hidden="true">
+						<path
+							d="M11.5 2.5l2 2-7.5 7.5H4v-2L11.5 2.5z"
+							stroke="currentColor"
+							stroke-width="1.6"
+							fill="none"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
+					</svg>
+				</button>
+			</div>
 			<div class="min-w-0 flex-1">
 				<h1 class="truncate text-3xl font-semibold">
 					{fields.display_name || fields.name || 'Edit profile'}
@@ -503,3 +542,62 @@
 		{/if}
 	</div>
 {/if}
+
+<!-- Picture URL editor dialog. Two-way bound to fields.picture, so changes
+     here also reflect in the Images form section (and vice versa). Won't
+     publish until the user submits the main form. -->
+<dialog
+	bind:this={pictureDialog}
+	onclose={() => (pictureEditorOpen = false)}
+	class="fixed inset-0 m-auto rounded-2xl border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] p-0 text-[var(--clave-text-muted)] shadow-2xl backdrop:bg-black/40 backdrop:backdrop-blur-sm"
+>
+	<div class="w-[min(440px,calc(100vw-2rem))] p-5">
+		<h2 class="text-base font-semibold text-neutral-900 dark:text-neutral-100">
+			Edit profile picture
+		</h2>
+		<div class="mt-4 flex items-center gap-3">
+			<Avatar
+				pubkey={userPubkey}
+				size="lg"
+				label={fields.display_name || fields.name}
+				picture={editingPictureUrl}
+			/>
+			<p class="text-xs">Live preview. The Robohash robot shows when this is empty.</p>
+		</div>
+		<label class="mt-4 block">
+			<span class="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Picture URL</span>
+			<input
+				type="url"
+				bind:value={editingPictureUrl}
+				placeholder="https://…"
+				class="mt-1.5 block w-full rounded-xl border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--clave-tint)]/40"
+				onkeydown={(e) => {
+					if (e.key === 'Enter') {
+						e.preventDefault();
+						applyPictureEdit();
+					}
+				}}
+			/>
+		</label>
+		<p class="mt-2 text-xs">
+			Leave blank to fall back to the deterministic Robohash robot. Changes save when you click
+			<strong>Save &amp; publish</strong> below.
+		</p>
+		<div class="mt-5 flex justify-end gap-2">
+			<button
+				type="button"
+				onclick={() => (pictureEditorOpen = false)}
+				class="rounded-xl border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] px-4 py-2 text-sm font-medium hover:bg-[var(--clave-surface)]"
+			>
+				Cancel
+			</button>
+			<button
+				type="button"
+				onclick={applyPictureEdit}
+				class="rounded-xl bg-[var(--clave-tint)] px-4 py-2 text-sm font-semibold text-[var(--clave-tint-fg)] hover:opacity-90"
+			>
+				Apply
+			</button>
+		</div>
+	</div>
+</dialog>
