@@ -116,12 +116,15 @@ export function hexToRgba(hex: string, alpha: number): string {
 // color into the upper half of the screen and dies off at the bottom for
 // legibility against form content.
 //
-// Stops at 0%/35%/70%/100% with alphas 0.38/0.26/0.12/0.06 (light mode)
-// alternating start → end → end → start. Dark mode is currently unused
-// (Tailwind 4 `@variant dark` set up but never applied) — values tuned
-// for parity if dark mode is ever re-enabled.
+// Stops at 0%/35%/70%/100% with alphas 0.42/0.22/0.10/0.04 (light mode)
+// alternating start → end → end → start. The fade is intentionally steep
+// through the upper third — most of the identity tint sits behind the
+// header where it reinforces the active-account signal, then drops to
+// near-transparent for the form content below. Dark mode is currently
+// unused (Tailwind 4 `@variant dark` set up but never applied) — values
+// scaled ~0.8x of light for parity if dark mode is ever re-enabled.
 export function ambientGradientCss(theme: AccountTheme, scheme: 'light' | 'dark'): string {
-	const a = scheme === 'light' ? [0.38, 0.26, 0.12, 0.06] : [0.3, 0.2, 0.1, 0.05];
+	const a = scheme === 'light' ? [0.42, 0.22, 0.1, 0.04] : [0.34, 0.18, 0.08, 0.03];
 	return [
 		`linear-gradient(to bottom,`,
 		`${hexToRgba(theme.start, a[0])} 0%,`,

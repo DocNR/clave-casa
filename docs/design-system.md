@@ -230,7 +230,7 @@ Mirrors iOS HomeView. Four-stop top → bottom progressive fade carries the acti
 ```ts
 // src/lib/theme.ts
 export function ambientGradientCss(theme: AccountTheme, scheme: 'light' | 'dark'): string {
-    const a = scheme === 'light' ? [0.38, 0.26, 0.12, 0.06] : [0.3, 0.2, 0.1, 0.05];
+    const a = scheme === 'light' ? [0.42, 0.22, 0.1, 0.04] : [0.34, 0.18, 0.08, 0.03];
     return [
         `linear-gradient(to bottom,`,
         `${hexToRgba(theme.start, a[0])} 0%,`,
@@ -240,6 +240,8 @@ export function ambientGradientCss(theme: AccountTheme, scheme: 'light' | 'dark'
     ].join(' ');
 }
 ```
+
+The fade is intentionally steep through the upper third — most of the identity tint sits behind the header where it reinforces the active-account signal, then drops to near-transparent below so form content stays primary.
 
 Rendered by a fixed-position `<div class="clave-ambient-layer">` in `+layout.svelte`. The layer sits above the wrapper's `bg-neutral-50` base and below the page content. Switches via `$effect` on the active connection.
 
