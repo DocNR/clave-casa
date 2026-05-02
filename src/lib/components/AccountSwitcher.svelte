@@ -202,11 +202,13 @@
 	</div>
 {/if}
 
-<!-- Sign-out confirmation dialog. Native <dialog> handles ESC and a11y. -->
+<!-- Sign-out confirmation dialog. Native <dialog> handles ESC and a11y.
+     fixed/inset/m-auto restore browser default centering after Tailwind 4's
+     Preflight resets margin:0 on dialog. -->
 <dialog
 	bind:this={confirmDialog}
 	onclose={() => (confirmingSignOut = undefined)}
-	class="rounded-2xl border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] p-0 text-[var(--clave-text-muted)] shadow-2xl backdrop:bg-black/40 backdrop:backdrop-blur-sm"
+	class="fixed inset-0 m-auto rounded-2xl border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] p-0 text-[var(--clave-text-muted)] shadow-2xl backdrop:bg-black/40 backdrop:backdrop-blur-sm"
 >
 	{#if confirmingSignOut}
 		{@const c = confirmingSignOut}
