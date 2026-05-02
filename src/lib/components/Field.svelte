@@ -1,3 +1,4 @@
+<!-- src/lib/components/Field.svelte -->
 <script lang="ts">
 	type Props = {
 		label: string;
@@ -9,11 +10,11 @@
 </script>
 
 <label class="block">
-	<span class="text-sm font-medium">{label}</span>
+	<span class="text-sm font-semibold">{label}</span>
 	<input
 		{type}
 		{placeholder}
 		bind:value
-		class="mt-1 block w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+		class="mt-1.5 block w-full rounded-xl border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--clave-tint)]/40"
 	/>
 </label>
