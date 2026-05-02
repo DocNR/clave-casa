@@ -31,6 +31,30 @@ export function getActiveSigner():
 	return { signer: activeSigner, userPubkey: activeUserPubkey, bunkerRelays: activeBunkerRelays };
 }
 
+// Synchronously extract bunker relay URLs from the active connection's URI
+// without requiring a running BunkerSigner. Used by the propagation layer
+// for reads (profile fetch, NIP-65 lookup) so the bunker relay is in the
+// query set even before a signer is established.
+export function getStoredBunkerRelays(): string[] {
+	if (typeof localStorage === 'undefined') return [];
+	const raw = localStorage.getItem('clave-casa.connections.v1');
+	const activePubkey = localStorage.getItem('clave-casa.activeAccount.v1');
+	if (!raw || !activePubkey) return [];
+	try {
+		const all = JSON.parse(raw) as Array<{ accountPubkey: string; bunkerUri: string }>;
+		const conn = Array.isArray(all)
+			? all.find((c) => c.accountPubkey === activePubkey)
+			: undefined;
+		if (!conn) return [];
+		const m = conn.bunkerUri.match(/^bunker:\/\/[0-9a-fA-F]{64}\?(.*)$/);
+		if (!m) return [];
+		const params = new URLSearchParams(m[1]);
+		return params.getAll('relay');
+	} catch {
+		return [];
+	}
+}
+
 // Re-export for stable import path; we accept the same set of inputs as
 // nostr-tools' parseBunkerInput (bunker:// URLs and NIP-05 identifiers).
 export { parseBunkerInput };

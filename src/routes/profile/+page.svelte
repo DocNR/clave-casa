@@ -65,14 +65,11 @@
 			goto('/connect', { replaceState: true });
 			return;
 		}
+		// Use the stored accountPubkey directly — no need to wake the signer
+		// just to look up our own pubkey. Save() lazily connects the signer
+		// when the user actually wants to publish.
+		userPubkey = conn.accountPubkey;
 		try {
-			const active = getActiveSigner();
-			if (active && active.userPubkey === conn.accountPubkey) {
-				userPubkey = active.userPubkey;
-			} else {
-				const { userPubkey: pk } = await connectSigner(conn);
-				userPubkey = pk;
-			}
 			await loadProfile();
 		} catch (e) {
 			loadError = e instanceof Error ? e.message : String(e);
@@ -120,10 +117,23 @@
 
 	async function save() {
 		if (phase !== 'editing') return;
-		const active = getActiveSigner();
-		if (!active) {
-			loadError = 'No active signer.';
-			return;
+		let active = getActiveSigner();
+		if (!active || active.userPubkey !== userPubkey) {
+			if (!conn) {
+				loadError = 'No active connection.';
+				return;
+			}
+			try {
+				await connectSigner(conn);
+			} catch (e) {
+				loadError = e instanceof Error ? e.message : String(e);
+				return;
+			}
+			active = getActiveSigner();
+			if (!active) {
+				loadError = 'Could not establish signer.';
+				return;
+			}
 		}
 		phase = 'publishing';
 		publishReport = undefined;

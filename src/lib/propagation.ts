@@ -6,7 +6,7 @@
 
 import type { Event, VerifiedEvent } from 'nostr-tools/core';
 import type { Filter } from 'nostr-tools/filter';
-import { getActiveSigner, getPool } from './signer';
+import { getActiveSigner, getPool, getStoredBunkerRelays } from './signer';
 import { BROADCAST_SET, SCAN_SET, DEFAULT_READ_SET } from './relays';
 
 // Build the union of relays we should use for read queries: the bunker URI's
@@ -16,6 +16,7 @@ function readDiscoveryRelays(): string[] {
 	const active = getActiveSigner();
 	const set = new Set<string>([
 		...(active?.bunkerRelays ?? []),
+		...getStoredBunkerRelays(),
 		...BROADCAST_SET,
 		...DEFAULT_READ_SET
 	]);
