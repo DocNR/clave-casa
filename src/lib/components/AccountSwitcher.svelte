@@ -16,8 +16,17 @@
 	let connections: Connection[] = $state([]);
 	let activePubkey: string | undefined = $state(undefined);
 	let open = $state(false);
-	let confirmingSignOut: string | undefined = $state(undefined);
+	let confirmingSignOut: Connection | undefined = $state(undefined);
 	let containerEl: HTMLElement | undefined = $state();
+	let confirmDialog: HTMLDialogElement | undefined = $state();
+
+	$effect(() => {
+		if (confirmingSignOut && confirmDialog && !confirmDialog.open) {
+			confirmDialog.showModal();
+		} else if (!confirmingSignOut && confirmDialog?.open) {
+			confirmDialog.close();
+		}
+	});
 
 	onMount(() => {
 		connections = loadConnections();
@@ -28,9 +37,11 @@
 		};
 		const onMouseDown = (e: MouseEvent) => {
 			if (!open) return;
+			// Ignore clicks inside the floating <dialog>; it lives outside
+			// containerEl in the DOM tree.
+			if (e.target instanceof Node && confirmDialog?.contains(e.target)) return;
 			if (containerEl && e.target instanceof Node && !containerEl.contains(e.target)) {
 				open = false;
-				confirmingSignOut = undefined;
 			}
 		};
 		window.addEventListener('storage', onStorage);
@@ -123,7 +134,7 @@
 				class="absolute right-0 z-10 mt-1.5 w-72 overflow-hidden rounded-2xl border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] shadow-lg"
 			>
 				{#each connections as c (c.accountPubkey)}
-					<div class="group flex items-center gap-1 px-1 py-0.5">
+					<div class="flex items-center gap-1 px-1 py-0.5">
 						<button
 							type="button"
 							class="flex flex-1 items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm hover:bg-[var(--clave-surface)]"
@@ -154,43 +165,24 @@
 								</svg>
 							{/if}
 						</button>
-						{#if confirmingSignOut === c.accountPubkey}
-							<button
-								type="button"
-								onclick={() => signOut(c.accountPubkey)}
-								class="rounded-lg bg-red-500/15 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-500/25 dark:text-red-400"
-								title="Confirm sign out"
-							>
-								Confirm
-							</button>
-							<button
-								type="button"
-								onclick={() => (confirmingSignOut = undefined)}
-								class="rounded-lg px-2 py-1 text-xs text-[var(--clave-text-muted)] hover:bg-[var(--clave-surface)]"
-								title="Cancel"
-							>
-								Cancel
-							</button>
-						{:else}
-							<button
-								type="button"
-								onclick={() => (confirmingSignOut = c.accountPubkey)}
-								class="rounded-lg p-1.5 text-[var(--clave-text-muted)] opacity-0 transition-opacity hover:bg-red-500/10 hover:text-red-600 group-hover:opacity-100 dark:hover:text-red-400"
-								title="Sign out this account"
-								aria-label="Sign out {label(c)}"
-							>
-								<svg viewBox="0 0 16 16" class="h-4 w-4" aria-hidden="true">
-									<path
-										d="M9.5 3h2.5a1 1 0 011 1v8a1 1 0 01-1 1H9.5M4 8h7m-2-2.5L11.5 8 9 10.5"
-										stroke="currentColor"
-										stroke-width="1.5"
-										fill="none"
-										stroke-linecap="round"
-										stroke-linejoin="round"
-									/>
-								</svg>
-							</button>
-						{/if}
+						<button
+							type="button"
+							onclick={() => (confirmingSignOut = c)}
+							class="rounded-lg p-1.5 text-[var(--clave-text-muted)] hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
+							title="Sign out this account"
+							aria-label="Sign out {label(c)}"
+						>
+							<svg viewBox="0 0 16 16" class="h-4 w-4" aria-hidden="true">
+								<path
+									d="M9.5 3h2.5a1 1 0 011 1v8a1 1 0 01-1 1H9.5M4 8h7m-2-2.5L11.5 8 9 10.5"
+									stroke="currentColor"
+									stroke-width="1.5"
+									fill="none"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								/>
+							</svg>
+						</button>
 					</div>
 				{/each}
 				<a
@@ -209,3 +201,50 @@
 		{/if}
 	</div>
 {/if}
+
+<!-- Sign-out confirmation dialog. Native <dialog> handles ESC and a11y. -->
+<dialog
+	bind:this={confirmDialog}
+	onclose={() => (confirmingSignOut = undefined)}
+	class="rounded-2xl border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] p-0 text-[var(--clave-text-muted)] shadow-2xl backdrop:bg-black/40 backdrop:backdrop-blur-sm"
+>
+	{#if confirmingSignOut}
+		{@const c = confirmingSignOut}
+		<div class="w-[min(420px,calc(100vw-2rem))] p-5">
+			<div class="flex items-center gap-3">
+				<Avatar pubkey={c.accountPubkey} size="md" label={c.label} picture={c.pictureUrl} />
+				<div class="min-w-0 flex-1">
+					<h2 class="text-base font-semibold text-neutral-900 dark:text-neutral-100">
+						Sign out {label(c)}?
+					</h2>
+					<p class="truncate font-mono text-[11px]">{shortPubkey(c.accountPubkey)}</p>
+				</div>
+			</div>
+			<p class="mt-4 text-sm">
+				Removes this account from clave.casa on this device. Your data on Nostr is
+				unaffected, and your private key never left Clave.
+			</p>
+			<p class="mt-2 text-xs">
+				The pairing stays in Clave's <em>Connected Clients</em> until you also unpair it
+				there. Without that step, this device can re-connect using the saved bunker URI
+				later.
+			</p>
+			<div class="mt-5 flex justify-end gap-2">
+				<button
+					type="button"
+					onclick={() => (confirmingSignOut = undefined)}
+					class="rounded-xl border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] px-4 py-2 text-sm font-medium hover:bg-[var(--clave-surface)]"
+				>
+					Cancel
+				</button>
+				<button
+					type="button"
+					onclick={() => signOut(c.accountPubkey)}
+					class="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+				>
+					Sign out
+				</button>
+			</div>
+		</div>
+	{/if}
+</dialog>

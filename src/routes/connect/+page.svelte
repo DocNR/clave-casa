@@ -67,7 +67,7 @@
 			setActivePubkey(userPubkey);
 			window.dispatchEvent(new StorageEvent('storage', { key: 'clave-casa.activeAccount.v1' }));
 			stopElapsedTimer();
-			goto('/profile', { replaceState: true });
+			goto('/edit', { replaceState: true });
 		} catch (e) {
 			stopElapsedTimer();
 			status = 'error';

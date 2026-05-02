@@ -7,7 +7,7 @@
 	onMount(() => {
 		const conns = loadConnections();
 		if (conns.length > 0 && getActiveConnection()) {
-			goto('/profile', { replaceState: true });
+			goto('/edit', { replaceState: true });
 		}
 	});
 </script>
