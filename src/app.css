@@ -1,14 +1,21 @@
 @import 'tailwindcss';
 
+/* Force class-based dark mode. We never apply the .dark class anywhere,
+   so all `dark:` Tailwind variants stay inactive even when the user's OS
+   prefers dark. Removes Tailwind 4's default media-query dark mode. To
+   re-enable system-driven dark in the future, drop this @variant or add
+   the `.dark` class to <html> via a JS effect. */
+@variant dark (.dark &);
+
 :root {
-	color-scheme: light dark;
+	color-scheme: light;
 
 	/* Default tint — overridden at runtime when an account becomes active.
 	   See +layout.svelte's $effect that watches active connection. */
 	--clave-tint: #1a73d9;
 	--clave-tint-fg: #ffffff;
 
-	/* Surface tokens for cards / inputs / borders. Light + dark adapt below. */
+	/* Surface tokens for cards / inputs / borders. Light only for now. */
 	--clave-surface: rgb(245 245 245 / 0.6);
 	--clave-surface-alt: rgb(255 255 255);
 	--clave-border: rgb(0 0 0 / 0.08);
@@ -17,15 +24,6 @@
 	/* Radii. Match iOS 16pt cards / 12pt inputs. */
 	--clave-radius-card: 16px;
 	--clave-radius-input: 12px;
-}
-
-@media (prefers-color-scheme: dark) {
-	:root {
-		--clave-surface: rgb(23 23 23 / 0.5);
-		--clave-surface-alt: rgb(10 10 10);
-		--clave-border: rgb(255 255 255 / 0.08);
-		--clave-text-muted: rgb(163 163 163);
-	}
 }
 
 html {
@@ -44,6 +42,17 @@ h1,
 h2,
 h3 {
 	letter-spacing: -0.01em;
+}
+
+/* iOS Safari focus-zoom prevention: any input with font-size < 16px causes
+   automatic page zoom on focus. Bump inputs to 16px on narrow viewports
+   only — desktop keeps the visually-tuned text-sm (14px). */
+@media (max-width: 768px) {
+	input,
+	textarea,
+	select {
+		font-size: 16px;
+	}
 }
 
 /* Per-account ambient background overlay. Rendered as a fixed full-screen

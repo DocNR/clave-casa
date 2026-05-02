@@ -9,22 +9,12 @@
 
 	let { children } = $props();
 	let activePubkey = $state<string | undefined>(undefined);
-	let colorScheme: 'light' | 'dark' = $state('light');
 
 	onMount(() => {
 		const refresh = () => (activePubkey = getActivePubkey());
 		refresh();
 		window.addEventListener('storage', refresh);
-
-		const mql = window.matchMedia('(prefers-color-scheme: dark)');
-		const updateScheme = () => (colorScheme = mql.matches ? 'dark' : 'light');
-		updateScheme();
-		mql.addEventListener('change', updateScheme);
-
-		return () => {
-			window.removeEventListener('storage', refresh);
-			mql.removeEventListener('change', updateScheme);
-		};
+		return () => window.removeEventListener('storage', refresh);
 	});
 
 	$effect(() => {
@@ -38,7 +28,8 @@
 		const theme = themeForPubkey(activePubkey);
 		root.style.setProperty('--clave-tint', theme.accent);
 		root.style.setProperty('--clave-tint-fg', fgForHex(theme.accent));
-		root.style.setProperty('--clave-ambient', ambientGradientCss(theme, colorScheme));
+		// Light mode only for now — see app.css @variant dark + color-scheme: light.
+		root.style.setProperty('--clave-ambient', ambientGradientCss(theme, 'light'));
 	});
 </script>
 
@@ -46,10 +37,10 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-<div class="relative min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
+<div class="relative min-h-screen bg-neutral-50 text-neutral-900">
 	<!-- Ambient gradient overlay (per-active-account). Sits above the
-	     wrapper's solid bg-neutral-* and below the sticky header + main
-	     content. Switches via $effect on activePubkey / colorScheme. -->
+	     wrapper's solid neutral-50 base and below the sticky header + main
+	     content. Switches via $effect on activePubkey. -->
 	<div class="clave-ambient-layer" aria-hidden="true"></div>
 	<header
 		class="sticky top-0 z-20 border-b border-[var(--clave-border)] bg-[var(--clave-surface)] backdrop-blur-xl"
