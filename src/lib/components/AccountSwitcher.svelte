@@ -2,6 +2,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { npubEncode } from 'nostr-tools/nip19';
 	import {
 		loadConnections,
@@ -108,27 +109,68 @@
 	}
 
 	const active = $derived(connections.find((c) => c.accountPubkey === activePubkey));
+
+	// True when the user is on /connect *and* already has at least one
+	// account paired — i.e., they explicitly clicked "Add another account"
+	// rather than landing here from a logged-out state. In that mode the
+	// trigger displays an "Adding account" pill instead of the previous
+	// active-account chip, since the visual contradiction otherwise is
+	// confusing (you're entering a new bunker URI but the chip still shows
+	// the old account).
+	const onConnectAddFlow = $derived(
+		page.url?.pathname === '/connect' && connections.length > 0
+	);
 </script>
 
 {#if connections.length === 0}
 	<a href="/connect" class="text-sm font-medium text-[var(--clave-tint)] hover:underline">Connect</a>
 {:else}
 	<div class="relative" bind:this={containerEl}>
-		<button
-			type="button"
-			class="flex items-center gap-2 rounded-full border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] py-1 pl-1 pr-3 text-sm font-medium hover:bg-[var(--clave-surface)]"
-			onclick={() => (open = !open)}
-		>
-			{#if active}
-				<Avatar pubkey={active.accountPubkey} size="sm" label={active.label} picture={active.pictureUrl} />
-				<span>{label(active)}</span>
-			{:else}
-				<span class="px-2">Pick account</span>
-			{/if}
-			<svg viewBox="0 0 12 12" class="h-3 w-3 opacity-50" aria-hidden="true">
-				<path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
-			</svg>
-		</button>
+		{#if onConnectAddFlow}
+			<button
+				type="button"
+				class="flex items-center gap-2 rounded-full border border-[var(--clave-tint)]/40 bg-[var(--clave-tint)]/10 px-3 py-1.5 text-sm font-semibold text-[var(--clave-tint)] hover:bg-[var(--clave-tint)]/15"
+				onclick={() => (open = !open)}
+				title="Adding new account — tap to switch to an existing one"
+			>
+				<svg viewBox="0 0 16 16" class="h-3.5 w-3.5" aria-hidden="true">
+					<path
+						d="M8 3v10M3 8h10"
+						stroke="currentColor"
+						stroke-width="1.8"
+						fill="none"
+						stroke-linecap="round"
+					/>
+				</svg>
+				<span>Adding account</span>
+				<svg viewBox="0 0 12 12" class="h-3 w-3 opacity-60" aria-hidden="true">
+					<path
+						d="M3 4.5l3 3 3-3"
+						stroke="currentColor"
+						stroke-width="1.5"
+						fill="none"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/>
+				</svg>
+			</button>
+		{:else}
+			<button
+				type="button"
+				class="flex items-center gap-2 rounded-full border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] py-1 pl-1 pr-3 text-sm font-medium hover:bg-[var(--clave-surface)]"
+				onclick={() => (open = !open)}
+			>
+				{#if active}
+					<Avatar pubkey={active.accountPubkey} size="sm" label={active.label} picture={active.pictureUrl} />
+					<span>{label(active)}</span>
+				{:else}
+					<span class="px-2">Pick account</span>
+				{/if}
+				<svg viewBox="0 0 12 12" class="h-3 w-3 opacity-50" aria-hidden="true">
+					<path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+				</svg>
+			</button>
+		{/if}
 		{#if open}
 			<div
 				class="absolute right-0 z-10 mt-1.5 w-72 overflow-hidden rounded-2xl border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] shadow-lg"
