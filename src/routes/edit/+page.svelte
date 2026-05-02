@@ -27,6 +27,7 @@
 		defaultAvatarUrl,
 		getRobohashSet,
 		isRobohashUrl,
+		ROBOHASH_SET_KEY,
 		ROBOHASH_SETS,
 		setRobohashSet,
 		type RobohashSet
@@ -82,6 +83,10 @@
 	let approvalElapsedSec = $state(0);
 	let approvalTickInterval: ReturnType<typeof setInterval> | undefined;
 	let fetchFailed = $state(false);
+	// Reactive mirror of the localStorage Robohash set so the picker's
+	// active-state highlighting updates immediately when the user clicks
+	// a different style.
+	let currentSet = $state<RobohashSet>('set1');
 
 	// Track which account we've loaded so storage events that don't actually
 	// change the active account don't trigger pointless reloads.
@@ -121,7 +126,14 @@
 
 	onMount(() => {
 		void loadForActiveAccount();
-		const onStorage = () => void loadForActiveAccount();
+		currentSet = getRobohashSet();
+		const onStorage = (e: StorageEvent) => {
+			if (e.key === ROBOHASH_SET_KEY) {
+				currentSet = getRobohashSet();
+				return;
+			}
+			void loadForActiveAccount();
+		};
 		window.addEventListener('storage', onStorage);
 		return () => window.removeEventListener('storage', onStorage);
 	});
@@ -492,8 +504,7 @@
 				<TextareaField label="About" placeholder="A short bio…" bind:value={fields.about} />
 			</FormSectionCard>
 
-			<FormSectionCard label="Images">
-				<Field label="Picture URL" placeholder="https://…" bind:value={fields.picture} type="url" />
+			<FormSectionCard label="Banner">
 				<Field
 					label="Banner URL"
 					placeholder="https://… (wider image, header)"
@@ -660,22 +671,22 @@
 				<legend class="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
 					Robohash style
 				</legend>
-				<div class="mt-2 grid grid-cols-5 gap-1.5">
+				<div class="mt-2 grid grid-cols-3 gap-1.5 sm:grid-cols-5">
 					{#each ROBOHASH_SETS as s (s.id)}
-						{@const isActive = getRobohashSet() === s.id}
+						{@const isActive = currentSet === s.id}
 						<button
 							type="button"
 							onclick={() => {
-								setRobohashSet(s.id as RobohashSet);
-								// Regenerate the URL with the new set so the preview updates.
-								// Empty stays empty (treats blank as opt-out).
-								if (isRobohashUrl(editingPictureUrl)) {
-									editingPictureUrl = defaultAvatarUrl(userPubkey, s.id as RobohashSet);
+								setRobohashSet(s.id);
+								// If field is empty, fill with the new style. If it's
+								// already a Robohash, swap to the new set. Custom URLs
+								// are left alone (the picker only renders when the URL
+								// is empty or a Robohash anyway).
+								if (!editingPictureUrl || isRobohashUrl(editingPictureUrl)) {
+									editingPictureUrl = defaultAvatarUrl(userPubkey, s.id);
 								}
 							}}
-							class="rounded-lg border px-2 py-1.5 text-[11px] font-medium"
-							class:active-set={isActive}
-							class:border-tint={isActive}
+							class="rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors"
 							style:border-color={isActive ? 'var(--clave-tint)' : 'var(--clave-border)'}
 							style:background-color={isActive
 								? 'color-mix(in srgb, var(--clave-tint) 12%, transparent)'
@@ -687,12 +698,21 @@
 					{/each}
 				</div>
 				<p class="mt-2 text-[11px]">
-					Leave the URL field blank to publish a kind 0 with no picture — other clients will
-					use their own default.
+					Or remove the picture entirely so other clients use their own default avatar.
 				</p>
 			</fieldset>
 		{/if}
-		<div class="mt-5 flex justify-end gap-2">
+		<div class="mt-5 flex flex-wrap items-center justify-end gap-2">
+			{#if editingPictureUrl}
+				<button
+					type="button"
+					onclick={() => (editingPictureUrl = '')}
+					class="mr-auto rounded-xl px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-500/10 dark:text-red-400"
+					title="Clear the URL so the published kind 0 has no picture"
+				>
+					Remove picture
+				</button>
+			{/if}
 			<button
 				type="button"
 				onclick={() => (pictureEditorOpen = false)}
