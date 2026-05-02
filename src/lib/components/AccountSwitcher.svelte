@@ -1,6 +1,7 @@
 <!-- src/lib/components/AccountSwitcher.svelte -->
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { npubEncode } from 'nostr-tools/nip19';
 	import {
 		loadConnections,
 		getActivePubkey,
@@ -36,7 +37,12 @@
 	});
 
 	function shortPubkey(hex: string): string {
-		return hex.slice(0, 8) + '…';
+		try {
+			const npub = npubEncode(hex);
+			return npub.slice(0, 12) + '…';
+		} catch {
+			return hex.slice(0, 8) + '…';
+		}
 	}
 
 	function label(c: Connection): string {

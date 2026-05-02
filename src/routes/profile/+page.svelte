@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import type { VerifiedEvent } from 'nostr-tools/core';
+	import { npubEncode } from 'nostr-tools/nip19';
 	import {
 		getActiveConnection,
 		upsertConnection,
@@ -206,6 +207,9 @@
 	const totalRelays = $derived(
 		(publishReport?.tier1.length ?? 0) + (publishReport?.tier2.length ?? 0)
 	);
+
+	const npub = $derived(userPubkey ? npubEncode(userPubkey) : '');
+	const npubShort = $derived(npub ? `${npub.slice(0, 16)}…` : '');
 </script>
 
 {#if phase === 'loading'}
@@ -219,7 +223,7 @@
 					{fields.display_name || fields.name || 'Edit profile'}
 				</h1>
 				<p class="truncate font-mono text-xs text-[var(--clave-text-muted)]">
-					{userPubkey.slice(0, 16)}…
+					{npubShort}
 				</p>
 			</div>
 		</header>
