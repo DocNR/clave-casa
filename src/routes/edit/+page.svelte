@@ -6,15 +6,18 @@
 	import {
 		getActiveConnection,
 		loadConnections,
+		removeConnection,
 		setActivePubkey,
 		upsertConnection,
 		type Connection
 	} from '$lib/connections';
 	import {
+		clearLocalKey,
 		connectSigner,
 		getActiveSigner,
 		parseBunkerInput,
-		signEventViaBunker
+		signEventViaBunker,
+		type FriendlyConnectError
 	} from '$lib/signer';
 	import {
 		publishThreeTier,
@@ -320,7 +323,31 @@
 			try {
 				await connectSigner(conn);
 			} catch (e) {
-				loadError = e instanceof Error ? e.message : String(e);
+				const err = e as FriendlyConnectError;
+				// Stale-connection = the bunker secret was explicitly rejected.
+				// Auto-clean so the user lands on /connect ready to re-pair.
+				// Other categories (timeout, relay-unreachable, unknown) keep
+				// the connection — could be transient and we don't want to
+				// log the user out on a flaky network.
+				if (err && err.category === 'stale-connection' && conn) {
+					console.debug(
+						'[clave.casa] stale connection detected — auto-cleaning',
+						err.rawMessage
+					);
+					// Best-effort: parse the URI to get bp.pubkey for clearLocalKey.
+					// If parse fails, the orphaned local key is harmless (gets reused
+					// on re-pair to the same bunker, or stays unused).
+					try {
+						const bp = await parseBunkerInput(conn.bunkerUri);
+						if (bp) clearLocalKey(bp.pubkey);
+					} catch {
+						// non-fatal
+					}
+					removeConnection(conn.accountPubkey);
+					goto('/connect?reason=stale', { replaceState: true });
+					return;
+				}
+				loadError = err && err.message ? err.message : String(e);
 				return;
 			}
 			active = getActiveSigner();

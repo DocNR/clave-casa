@@ -47,7 +47,22 @@
 	let inboundCopied = $state(false);
 	let inboundCopyTimer: ReturnType<typeof setTimeout> | undefined;
 
+	// Stale-connection banner state. Set when /edit auto-cleans a connection
+	// after the signer rejected the bunker secret (deleted iOS-side) and
+	// redirects here with ?reason=stale. The banner explains what happened
+	// so the user doesn't think they got randomly logged out.
+	let staleBanner = $state(false);
+
 	onMount(() => {
+		// Stale-redirect banner: /edit redirects here with ?reason=stale when
+		// it auto-cleans a dead connection. Show the banner, then scrub the
+		// query so a refresh doesn't keep showing it.
+		const reason = new URLSearchParams(location.search).get('reason');
+		if (reason === 'stale') {
+			staleBanner = true;
+			history.replaceState(null, '', '/connect');
+		}
+
 		// (1) iOS helper handoff via #bunker= fragment — same handler as before.
 		const fragment = location.hash.slice(1);
 		if (fragment) {
@@ -398,6 +413,20 @@
 			link again in a few hours, or scan the code above with another device's signer.
 		</p>
 	{:else}
+		{#if staleBanner}
+			<!-- Auto-cleaned stale connection — /edit redirected here after the
+			     signer rejected the stored bunker secret. Explain what happened
+			     so the user doesn't think they got mysteriously logged out. -->
+			<div
+				class="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"
+			>
+				<p class="font-semibold">Your previous connection was removed</p>
+				<p class="mt-1">
+					Clave rejected the stored connection — usually because the account or pairing was
+					deleted on your phone. Pair this account again below to keep editing.
+				</p>
+			</div>
+		{/if}
 		<header class="space-y-2">
 			<!-- text-3xl matches /edit page heading per design-system.md §3 typography table. -->
 			<h1 class="text-3xl font-semibold">Connect a signer</h1>

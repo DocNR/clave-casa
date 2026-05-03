@@ -93,11 +93,106 @@ export type StoredConnection = {
 
 const DEFAULT_CONNECT_TIMEOUT_MS = 45_000;
 
+// Categorized connect failures. The raw nostr-tools / network errors are
+// terse and unhelpful for end users — and worse, they don't tell the caller
+// whether the failure is permanent (connection dead, must re-pair) or
+// transient (signer offline, can retry). This lets /edit's save flow auto-
+// recover from confirmed-dead connections without false-positive logouts on
+// flaky networks.
+export type ConnectErrorCategory =
+	| 'invalid-uri' // parseBunkerInput returned null — stored URI is malformed
+	| 'stale-connection' // signer rejected the secret — connection was deleted/unpaired iOS-side
+	| 'timeout' // no response within the budget — could be transient (signer offline, network)
+	| 'relay-unreachable' // couldn't open any of the bunker relays
+	| 'unknown'; // anything else — surface raw message
+
+export type RecoveryAction = 'sign-out-and-repair' | 'retry' | 'check-network';
+
+export type FriendlyConnectError = Error & {
+	category: ConnectErrorCategory;
+	rawMessage: string;
+	recovery: RecoveryAction;
+};
+
+// Patterns that indicate the bunker secret was rejected — i.e. the connection
+// was definitively removed iOS-side. Caller should auto-clean the stored
+// connection. Conservative: only patterns where the signer EXPLICITLY says
+// the auth failed. Generic timeouts are NOT here (those go to 'timeout').
+const STALE_CONNECTION_PATTERNS: readonly RegExp[] = [
+	/unauthori[sz]ed/i, // "Unauthorized" — most signers
+	/invalid secret/i,
+	/secret rejected/i,
+	/unknown client/i,
+	/permission denied/i, // at connect time (not sign_event), this means secret invalid
+	/not authori[sz]ed/i,
+	/auth failed/i
+];
+
+function categorizeConnectError(e: unknown): FriendlyConnectError {
+	const raw = e instanceof Error ? e.message : String(e);
+	const wrap = (
+		category: ConnectErrorCategory,
+		message: string,
+		recovery: RecoveryAction
+	): FriendlyConnectError => {
+		const err = new Error(message) as FriendlyConnectError;
+		err.category = category;
+		err.rawMessage = raw;
+		err.recovery = recovery;
+		return err;
+	};
+
+	if (/invalid bunker uri/i.test(raw)) {
+		return wrap(
+			'invalid-uri',
+			"The stored bunker link doesn't look valid. Sign out and pair again to fix this.",
+			'sign-out-and-repair'
+		);
+	}
+	if (STALE_CONNECTION_PATTERNS.some((p) => p.test(raw))) {
+		return wrap(
+			'stale-connection',
+			'This connection was removed in Clave. Pair again to keep editing.',
+			'sign-out-and-repair'
+		);
+	}
+	if (/timed out|timeout/i.test(raw)) {
+		return wrap(
+			'timeout',
+			"Couldn't reach your signer in time. Open Clave on your phone and confirm the account is still there, then try again.",
+			'retry'
+		);
+	}
+	if (/relay/i.test(raw) && /(connect|fail|unreachable|closed)/i.test(raw)) {
+		return wrap(
+			'relay-unreachable',
+			"Couldn't reach the signer's relay. Check your network and try again.",
+			'check-network'
+		);
+	}
+	return wrap('unknown', `Couldn't connect: ${raw}`, 'retry');
+}
+
 // Establish a NIP-46 signer from a stored connection. The local NIP-46 keypair
 // is persisted per *bunker pubkey* so reloads don't force a re-pair.
+//
+// Throws FriendlyConnectError on failure — callers can switch on `.category`
+// to decide between auto-cleanup (stale-connection) and retry-after-noise
+// (timeout / relay-unreachable). The `.message` is user-facing.
 export async function connectSigner(
 	conn: StoredConnection,
 	opts: ConnectOptions = {}
+): Promise<{ signer: BunkerSigner; userPubkey: string; bp: BunkerPointer }> {
+	try {
+		return await connectSignerInner(conn, opts);
+	} catch (e) {
+		throw categorizeConnectError(e);
+	}
+}
+
+async function connectSignerInner(
+	conn: StoredConnection,
+	opts: ConnectOptions
 ): Promise<{ signer: BunkerSigner; userPubkey: string; bp: BunkerPointer }> {
 	const { timeoutMs = DEFAULT_CONNECT_TIMEOUT_MS, onStage } = opts;
 	const stage = (s: ConnectStage, detail?: string) => {
