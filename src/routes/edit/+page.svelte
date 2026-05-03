@@ -5,10 +5,17 @@
 	import { npubEncode } from 'nostr-tools/nip19';
 	import {
 		getActiveConnection,
+		loadConnections,
+		setActivePubkey,
 		upsertConnection,
 		type Connection
 	} from '$lib/connections';
-	import { connectSigner, getActiveSigner, signEventViaBunker } from '$lib/signer';
+	import {
+		connectSigner,
+		getActiveSigner,
+		parseBunkerInput,
+		signEventViaBunker
+	} from '$lib/signer';
 	import {
 		publishThreeTier,
 		scanAndRebroadcast,
@@ -143,8 +150,56 @@
 		}
 	}
 
+	// iOS-handoff: AccountDetailView's "Edit on clave.casa" row opens
+	// `https://clave.casa/edit#bunker=<URL-encoded-bunker-uri>`. If the URI
+	// references an account we've already paired, just switch to it (no
+	// re-pair handshake needed). If it's new, pair inline. Either way, scrub
+	// the fragment from the URL bar before any logging picks it up — same
+	// pattern /connect uses for the same reason.
+	//
+	// "Different active account at link-open time = implicit switch" per
+	// BACKLOG: the user's intent is unambiguous (they tapped Edit-for-account-X
+	// from Clave iOS).
+	async function handleBunkerHandoff(bunkerUri: string): Promise<void> {
+		let bp;
+		try {
+			bp = await parseBunkerInput(bunkerUri);
+		} catch {
+			bp = null;
+		}
+		if (!bp) {
+			loadError = "That bunker URI doesn't look valid. Pick an account, or pair a new one from Connect.";
+			return;
+		}
+
+		// Already paired? Just switch — skip the handshake entirely.
+		// Note: matches by bp.pubkey, which equals the user pubkey for Clave-
+		// generated bunker URIs. For other signers where bunker.pubkey ≠ user
+		// pubkey, the lookup misses and we re-pair (one extra connect roundtrip,
+		// no harm — upsertConnection deduplicates by accountPubkey).
+		const existing = loadConnections().find((c) => c.accountPubkey === bp.pubkey);
+		if (existing) {
+			setActivePubkey(existing.accountPubkey);
+			return;
+		}
+
+		// New pair — connect inline. The loading UI ("Loading your profile…")
+		// covers this window; if connect fails we surface the error and let
+		// the layout's AccountSwitcher route the user.
+		try {
+			const { userPubkey } = await connectSigner({
+				accountPubkey: bp.pubkey,
+				bunkerUri,
+				addedAt: Date.now()
+			});
+			upsertConnection({ accountPubkey: userPubkey, bunkerUri, addedAt: Date.now() });
+			setActivePubkey(userPubkey);
+		} catch (e) {
+			loadError = e instanceof Error ? e.message : `Couldn't connect to your signer: ${e}`;
+		}
+	}
+
 	onMount(() => {
-		void loadForActiveAccount();
 		currentSet = getRobohashSet();
 		const onStorage = (e: StorageEvent) => {
 			if (e.key === ROBOHASH_SET_KEY) {
@@ -154,6 +209,24 @@
 			void loadForActiveAccount();
 		};
 		window.addEventListener('storage', onStorage);
+
+		// iOS-handoff fragment runs in a parallel async task so onMount can
+		// return its cleanup function synchronously (Svelte requires that).
+		// The handoff awaits before loadForActiveAccount so the right active
+		// account is set by the time we read it.
+		void (async () => {
+			const fragment = location.hash.slice(1);
+			if (fragment) {
+				const params = new URLSearchParams(fragment);
+				const bunkerUri = params.get('bunker');
+				history.replaceState(null, '', '/edit');
+				if (bunkerUri) {
+					await handleBunkerHandoff(bunkerUri);
+				}
+			}
+			void loadForActiveAccount();
+		})();
+
 		return () => window.removeEventListener('storage', onStorage);
 	});
 
