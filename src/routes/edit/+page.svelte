@@ -417,7 +417,28 @@
 			}
 		} catch (e) {
 			clearApprovalTick();
-			loadError = e instanceof Error ? e.message : String(e);
+			const err = e as FriendlyConnectError;
+			// Sign-time stale-connection (signer responded "Client not paired" /
+			// "Invalid or missing bunker secret" / etc.) means the connection
+			// was unpaired or the account deleted. Auto-clean the same way as
+			// the connect-time path. Other categories (timeout, unknown, etc.)
+			// surface as inline error — could be transient.
+			if (err && err.category === 'stale-connection' && conn) {
+				console.debug(
+					'[clave.casa] stale connection at sign time — auto-cleaning',
+					err.rawMessage
+				);
+				try {
+					const bp = await parseBunkerInput(conn.bunkerUri);
+					if (bp) clearLocalKey(bp.pubkey);
+				} catch {
+					// non-fatal
+				}
+				removeConnection(conn.accountPubkey);
+				goto('/connect?reason=stale', { replaceState: true });
+				return;
+			}
+			loadError = err && err.message ? err.message : String(e);
 		} finally {
 			phase = 'editing';
 		}

@@ -126,14 +126,37 @@ export type FriendlyConnectError = Error & {
 // was definitively removed iOS-side. Caller should auto-clean the stored
 // connection. Conservative: only patterns where the signer EXPLICITLY says
 // the auth failed. Generic timeouts are NOT here (those go to 'timeout').
-const STALE_CONNECTION_PATTERNS: readonly RegExp[] = [
-	/unauthori[sz]ed/i, // "Unauthorized" — most signers
-	/invalid secret/i,
+//
+// IMPORTANT: regex must use \b or be loose enough to match real signer
+// error strings, NOT idealized substring forms. Empirically observed:
+//   Clave: "Invalid or missing bunker secret" (LightSigner.swift:197-211 connect path)
+//   Clave: "Client not paired — send connect with valid bunker secret first" (sign path)
+//   Amber / nsec.app: "Unauthorized" (typical)
+const STALE_AT_CONNECT_PATTERNS: readonly RegExp[] = [
+	/unauthori[sz]ed/i,
+	/\binvalid\b.{0,30}\bsecret\b/i, // matches "Invalid or missing bunker secret"
 	/secret rejected/i,
 	/unknown client/i,
-	/permission denied/i, // at connect time (not sign_event), this means secret invalid
+	/client not paired/i, // Clave-specific
+	/permission denied/i, // at connect time, this means secret invalid
 	/not authori[sz]ed/i,
 	/auth failed/i
+];
+
+// At-sign-time patterns are TIGHTER: must NOT include "permission denied"
+// because Clave's two-stage approval pattern uses that exact error to mean
+// "user is being prompted, queued for approval, the signed event is coming".
+// Including "permission denied" here would break the two-stage flow that's
+// the whole point of signEventViaBunker.
+const STALE_AT_SIGN_PATTERNS: readonly RegExp[] = [
+	/unauthori[sz]ed/i,
+	/\binvalid\b.{0,30}\bsecret\b/i,
+	/secret rejected/i,
+	/unknown client/i,
+	/client not paired/i,
+	/not authori[sz]ed/i,
+	/auth failed/i
+	// NOT /permission denied/ — that's the two-stage approval-pending signal
 ];
 
 function categorizeConnectError(e: unknown): FriendlyConnectError {
@@ -157,7 +180,7 @@ function categorizeConnectError(e: unknown): FriendlyConnectError {
 			'sign-out-and-repair'
 		);
 	}
-	if (STALE_CONNECTION_PATTERNS.some((p) => p.test(raw))) {
+	if (STALE_AT_CONNECT_PATTERNS.some((p) => p.test(raw))) {
 		return wrap(
 			'stale-connection',
 			'This connection was removed in Clave. Pair again to keep editing.',
@@ -517,9 +540,30 @@ export async function signEventViaBunker(
 				}
 				if (parsed.id !== requestId) return;
 
-				// Permission-denied / queued / auth-url: keep listening
 				if (parsed.error || parsed.result === 'auth_url' || !parsed.result) {
 					if (parsed.error) {
+						// Stale-connection error responses (e.g. "Client not paired" after
+						// the user unpaired this client iOS-side) mean there is NO
+						// two-stage approval coming — the connection is dead. Fail fast
+						// with a categorized error so the caller can auto-clean. Without
+						// this, the subscription would stay alive until 120s timeout
+						// treating every error as approval-pending.
+						if (STALE_AT_SIGN_PATTERNS.some((p) => p.test(parsed.error!))) {
+							console.debug(
+								'[clave.casa] sign_event stale-connection error — failing fast:',
+								parsed.error
+							);
+							const staleErr = new Error(
+								'This connection was removed in Clave. Pair again to keep editing.'
+							) as FriendlyConnectError;
+							staleErr.category = 'stale-connection';
+							staleErr.rawMessage = parsed.error;
+							staleErr.recovery = 'sign-out-and-repair';
+							settle(() => reject(staleErr));
+							return;
+						}
+						// Otherwise: treat as Clave's two-stage approval-pending pattern.
+						// (e.g. "permission denied" while user is being prompted to approve.)
 						console.debug('[clave.casa] sign_event intermediate response:', parsed.error);
 						opts.onProgress?.({ stage: 'pending', startedAt });
 					}
