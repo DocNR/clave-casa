@@ -64,6 +64,15 @@ export function setActivePubkey(pubkey: string | undefined) {
 	} else {
 		localStorage.removeItem(ACTIVE_KEY);
 	}
+	// Browsers don't fire `storage` events in the SAME tab — only in OTHER
+	// tabs/windows. Header tint, AccountSwitcher, and /edit's profile-load
+	// effect all listen for storage events to refresh on account switch.
+	// Dispatch a synthetic event so same-tab listeners pick up the change
+	// (mirrors the pattern connect/+page and AccountSwitcher use after their
+	// own setActivePubkey calls). Without this, the page-load handoff at
+	// /edit#bunker= leaves the header chrome on the previously-active account
+	// until a hard refresh.
+	window.dispatchEvent(new StorageEvent('storage', { key: ACTIVE_KEY }));
 }
 
 export function getActiveConnection(): Connection | undefined {
