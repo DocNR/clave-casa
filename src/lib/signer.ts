@@ -91,7 +91,15 @@ export type StoredConnection = {
 	addedAt: number;
 };
 
-const DEFAULT_CONNECT_TIMEOUT_MS = 45_000;
+// 15s budget for the bunker:// connect handshake. Healthy signers respond
+// within 1-3s; the previous 45s budget was overly conservative and meant
+// users with deleted accounts (proxy can't route → no response possible)
+// waited 45s before getting any actionable error. Trade-off: legitimate
+// slow signers (cold-start, slow cellular) might rarely tip over — recovery
+// is a manual retry, no data loss. The signEventViaBunker budget stays at
+// 120s (separate constant, in that function) since user approval can take
+// longer.
+const DEFAULT_CONNECT_TIMEOUT_MS = 15_000;
 
 // Categorized connect failures. The raw nostr-tools / network errors are
 // terse and unhelpful for end users — and worse, they don't tell the caller
@@ -260,6 +268,11 @@ async function connectSignerInner(
 	// "Clave.Casa" instead of the bare npub. One-time per local key.
 	void publishClientIdentityIfNeeded(localKey, bp.relays);
 
+	// Start listening for proposed NIP-46 session_terminated notifications
+	// from the signer. No-op if the signer doesn't publish them; instant
+	// recovery if it does. Spec at docs/proposals/nip46-session-termination.md.
+	startTerminationListener(localKey, bp, userPubkey);
+
 	return { signer, userPubkey, bp };
 }
 
@@ -339,6 +352,10 @@ export async function connectViaNostrConnect(
 	// belt-and-suspenders for signers that prefer kind 0 lookup over URI
 	// metadata. Same per-local-key dedupe applies.
 	void publishClientIdentityIfNeeded(localKey, bp.relays);
+
+	// Start listening for proposed NIP-46 session_terminated notifications.
+	// See connectSigner for rationale + spec link.
+	startTerminationListener(localKey, bp, userPubkey);
 
 	return { signer, userPubkey, bp, uri };
 }
@@ -565,11 +582,86 @@ export async function disconnectActiveSigner() {
 			// ignore
 		}
 	}
+	stopTerminationListener();
 	activeSigner = undefined;
 	activeUserPubkey = undefined;
 	activeBunkerRelays = [];
 	activeBp = undefined;
 	activeLocalKey = undefined;
+}
+
+// Proposed NIP-46 session-termination event listener. Subscribes to
+// kind:24133 events from the signer pubkey tagged for our local pubkey,
+// looking for unsolicited `method: "session_terminated"` payloads. When
+// one arrives, dispatches a `clave-casa:session-terminated` window event
+// that the layout listens for + handles cleanup.
+//
+// Spec: docs/proposals/nip46-session-termination.md.
+//
+// No-op until iOS / other signers publish the events. Until then the
+// existing connect-then-Unauthorized recovery path is the only fallback.
+let terminationSubCloser: { close: () => void } | undefined;
+let terminationFiredOnce = false;
+
+export type SessionTerminatedDetail = {
+	accountPubkey: string;
+	reason: string;
+};
+
+function startTerminationListener(
+	localKey: Uint8Array,
+	bp: BunkerPointer,
+	accountPubkey: string
+) {
+	if (terminationSubCloser) return;
+	terminationFiredOnce = false;
+	const localPubkey = getPublicKey(localKey);
+	const filter: Filter = {
+		kinds: [24133],
+		authors: [bp.pubkey],
+		'#p': [localPubkey],
+		// Only catch events published from now forward — historical termination
+		// events (from a previous offline session) won't help us here; the
+		// connect-then-Unauthorized path handles those.
+		since: Math.floor(Date.now() / 1000)
+	};
+
+	terminationSubCloser = getPool().subscribeMany(bp.relays, filter, {
+		onevent: async (event: Event) => {
+			if (terminationFiredOnce) return;
+			if (event.pubkey !== bp.pubkey) return;
+			let plaintext: string;
+			try {
+				plaintext = await tryDecrypt(event.content, localKey, bp.pubkey);
+			} catch {
+				return; // can't decrypt — not for us, or wrong scheme
+			}
+			let parsed: { method?: string; params?: string[] };
+			try {
+				parsed = JSON.parse(plaintext);
+			} catch {
+				return;
+			}
+			if (parsed.method !== 'session_terminated') return;
+
+			const reason = parsed.params?.[0] ?? 'unknown';
+			console.debug(
+				'[clave.casa] session_terminated received for',
+				accountPubkey.slice(0, 8) + '…',
+				'reason:',
+				reason
+			);
+			terminationFiredOnce = true;
+			const detail: SessionTerminatedDetail = { accountPubkey, reason };
+			window.dispatchEvent(new CustomEvent('clave-casa:session-terminated', { detail }));
+		}
+	});
+}
+
+function stopTerminationListener() {
+	terminationSubCloser?.close();
+	terminationSubCloser = undefined;
+	terminationFiredOnce = false;
 }
 
 // Per-bunker-pubkey local NIP-46 keypair. The local signer is the ephemeral

@@ -6,7 +6,9 @@
 	import { themeForPubkey, fgForHex, ambientGradientCss } from '$lib/theme';
 	import { applyMarketingTheme, clearMarketingTheme } from '$lib/marketing';
 	import { onMount } from 'svelte';
-	import { getActivePubkey } from '$lib/connections';
+	import { goto } from '$app/navigation';
+	import { loadConnections, removeConnection, getActivePubkey } from '$lib/connections';
+	import { clearLocalKey, parseBunkerInput, type SessionTerminatedDetail } from '$lib/signer';
 	import { page } from '$app/state';
 
 	let { children } = $props();
@@ -16,7 +18,36 @@
 		const refresh = () => (activePubkey = getActivePubkey());
 		refresh();
 		window.addEventListener('storage', refresh);
-		return () => window.removeEventListener('storage', refresh);
+
+		// Proposed NIP-46 session-termination handler. Fires when signer.ts'
+		// background subscription detects an unsolicited session_terminated
+		// event from an active signer. Cleanup mirrors the auto-clean path in
+		// /edit save() for stale-connection errors: remove from localStorage,
+		// orphan the local key, redirect to /connect with the stale-banner.
+		// Spec: docs/proposals/nip46-session-termination.md.
+		const onTerminated = async (e: Event) => {
+			const detail = (e as CustomEvent<SessionTerminatedDetail>).detail;
+			if (!detail) return;
+			console.debug('[clave.casa] handling session-terminated for', detail.accountPubkey.slice(0, 8));
+			// Best-effort: get bunker pubkey to clear the orphaned local key.
+			try {
+				const conn = loadConnections().find((c) => c.accountPubkey === detail.accountPubkey);
+				if (conn) {
+					const bp = await parseBunkerInput(conn.bunkerUri);
+					if (bp) clearLocalKey(bp.pubkey);
+				}
+			} catch {
+				// non-fatal
+			}
+			removeConnection(detail.accountPubkey);
+			void goto('/connect?reason=stale', { replaceState: true });
+		};
+		window.addEventListener('clave-casa:session-terminated', onTerminated);
+
+		return () => {
+			window.removeEventListener('storage', refresh);
+			window.removeEventListener('clave-casa:session-terminated', onTerminated);
+		};
 	});
 
 	$effect(() => {
