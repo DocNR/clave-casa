@@ -7,9 +7,15 @@
           {
             "/": "/connect/",
             "?": { "uri": "?*" },
-            "comment": "Universal Links handoff for nostrconnect:// — Clave handles clave.casa/connect/?uri=... to replace the Primal-squatted scheme. CRITICAL: must NOT broaden this scope. /edit, /edit#bunker=..., the marketing landing /, and any other path must stay routed to Safari/clave.casa. Only the inbound nostrconnect-replacement URL belongs to the iOS app."
+            "comment": "Universal Links handoff for nostrconnect:// — Clave handles clave.casa/connect/?uri=... to replace the Primal-squatted scheme. The trailing-slash variant matches the iOS-side spec; the no-slash variant below catches URLs from generators that drop the slash before the query string."
+          },
+          {
+            "/": "/connect",
+            "?": { "uri": "?*" },
+            "comment": "No-trailing-slash variant. Most URL generators write /connect?uri=... rather than /connect/?uri=... because the slash before ? is redundant. Both must work or Universal Links silently miss for half the link generators in the wild."
           }
-        ]
+        ],
+        "appLinksScopingNote": "CRITICAL: must NOT broaden this scope. /edit, /edit#bunker=..., the marketing landing /, and any other path must stay routed to Safari/clave.casa. Only the inbound nostrconnect-replacement URL belongs to the iOS app."
       }
     ]
   }
