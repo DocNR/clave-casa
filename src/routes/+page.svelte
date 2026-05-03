@@ -9,7 +9,13 @@
 	import { loadConnections, getActiveConnection } from '$lib/connections';
 	import HeroPhone from '$lib/components/marketing/HeroPhone.svelte';
 	import EditorMockup from '$lib/components/marketing/EditorMockup.svelte';
-	import { TESTFLIGHT_URL } from '$lib/marketing';
+	import {
+		TESTFLIGHT_URL,
+		CLAVE_REPO_URL,
+		CLAVE_CASA_REPO_URL,
+		DESIGN_SYSTEM_URL,
+		NIP46_SPEC_URL
+	} from '$lib/marketing';
 
 	// Preserve the original auto-redirect: signed-in users with an active
 	// connection skip the marketing page and go straight to /edit.
@@ -203,4 +209,134 @@
 			</div>
 		</div>
 	</section>
+
+	<!-- 5. Privacy -->
+	<section>
+		<h2 class="mb-6 text-2xl font-semibold tracking-tight" style="color: var(--clave-text)">
+			Privacy
+		</h2>
+		<ul class="space-y-4">
+			<li class="flex items-start gap-3">
+				<span class="text-xl leading-none" aria-hidden="true">🔒</span>
+				<div>
+					<div class="text-sm font-semibold" style="color: var(--clave-text)">
+						Your nsec never leaves your signer.
+					</div>
+					<div class="text-sm" style="color: var(--clave-text-muted)">
+						In Clave it's stored in the iOS Secure Enclave. In clave.casa it's whatever signer you
+						connected.
+					</div>
+				</div>
+			</li>
+			<li class="flex items-start gap-3">
+				<span class="text-xl leading-none" aria-hidden="true">🔍</span>
+				<div>
+					<div class="text-sm font-semibold" style="color: var(--clave-text)">
+						No analytics, no telemetry, no third-party scripts.
+					</div>
+					<div class="text-sm" style="color: var(--clave-text-muted)">
+						No off-domain fonts or icons. Static HTML/CSS/JS, hosted as a flat bundle.
+					</div>
+				</div>
+			</li>
+			<li class="flex items-start gap-3">
+				<span class="text-xl leading-none" aria-hidden="true">🛠️</span>
+				<div>
+					<div class="text-sm font-semibold" style="color: var(--clave-text)">Open source.</div>
+					<div class="text-sm" style="color: var(--clave-text-muted)">
+						Clave iOS and clave.casa are both MIT-licensed. Read the code, file issues, send
+						patches.
+					</div>
+				</div>
+			</li>
+			<li class="flex items-start gap-3">
+				<span class="text-xl leading-none" aria-hidden="true">🤖</span>
+				<div>
+					<div class="text-sm font-semibold" style="color: var(--clave-text)">
+						Robohash sees your npub when default avatars are rendered.
+					</div>
+					<div class="text-sm" style="color: var(--clave-text-muted)">
+						The npub is public anyway. If it bothers you, paste your own picture URL or remove the
+						picture.
+					</div>
+				</div>
+			</li>
+		</ul>
+	</section>
+
+	<!-- 6. Built in the open -->
+	<section>
+		<h2 class="mb-4 text-2xl font-semibold tracking-tight" style="color: var(--clave-text)">
+			Built in the open
+		</h2>
+		<p class="max-w-2xl text-base leading-relaxed" style="color: var(--clave-text)">
+			Clave iOS and clave.casa are open source on GitHub. They share a
+			<a
+				class="underline hover:no-underline"
+				href={DESIGN_SYSTEM_URL}
+				target="_blank"
+				rel="noopener noreferrer">cross-platform design system</a
+			>, the AccountTheme palette, and the privacy promise. PRs welcome.
+		</p>
+		<p class="mt-3 text-sm" style="color: var(--clave-text-muted)">
+			<a
+				class="hover:underline"
+				href={CLAVE_REPO_URL}
+				target="_blank"
+				rel="noopener noreferrer">Clave iOS</a
+			>
+			·
+			<a
+				class="hover:underline"
+				href={CLAVE_CASA_REPO_URL}
+				target="_blank"
+				rel="noopener noreferrer">clave.casa</a
+			>
+			·
+			<a
+				class="hover:underline"
+				href={DESIGN_SYSTEM_URL}
+				target="_blank"
+				rel="noopener noreferrer">Design system</a
+			>
+			·
+			<a
+				class="hover:underline"
+				href={NIP46_SPEC_URL}
+				target="_blank"
+				rel="noopener noreferrer">NIP-46 spec</a
+			>
+		</p>
+	</section>
 </div>
+
+<!-- 7. Footer -->
+<footer
+	class="mt-16 flex flex-col items-start justify-between gap-3 border-t pt-6 text-xs sm:flex-row sm:items-center"
+	style="border-color: var(--clave-border); color: var(--clave-text-muted)"
+>
+	<div>clave.casa</div>
+	<div class="flex flex-wrap gap-x-3 gap-y-1">
+		<a
+			class="hover:underline"
+			href={CLAVE_CASA_REPO_URL}
+			target="_blank"
+			rel="noopener noreferrer">GitHub</a
+		>
+		<span aria-hidden="true">·</span>
+		<a class="hover:underline" href={CLAVE_REPO_URL} target="_blank" rel="noopener noreferrer"
+			>iOS</a
+		>
+		<span aria-hidden="true">·</span>
+		<a
+			class="hover:underline"
+			href={DESIGN_SYSTEM_URL}
+			target="_blank"
+			rel="noopener noreferrer">Design system</a
+		>
+		<span aria-hidden="true">·</span>
+		<a class="hover:underline" href={TESTFLIGHT_URL} target="_blank" rel="noopener noreferrer"
+			>TestFlight</a
+		>
+	</div>
+</footer>
