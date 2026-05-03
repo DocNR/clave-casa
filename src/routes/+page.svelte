@@ -306,7 +306,7 @@
 			>
 		</p>
 		<p class="mt-6 text-sm" style="color: var(--clave-text-muted)">
-			Made in the open and with love by
+			A small thing by
 			<a
 				class="underline hover:no-underline"
 				href={CREDIT_NJUMP_URL}
