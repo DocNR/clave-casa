@@ -4,8 +4,10 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import AccountSwitcher from '$lib/components/AccountSwitcher.svelte';
 	import { themeForPubkey, fgForHex, ambientGradientCss } from '$lib/theme';
+	import { applyMarketingTheme, clearMarketingTheme } from '$lib/marketing';
 	import { onMount } from 'svelte';
 	import { getActivePubkey } from '$lib/connections';
+	import { page } from '$app/state';
 
 	let { children } = $props();
 	let activePubkey = $state<string | undefined>(undefined);
@@ -20,9 +22,14 @@
 	$effect(() => {
 		const root = document.documentElement;
 		if (!activePubkey) {
-			root.style.removeProperty('--clave-tint');
-			root.style.removeProperty('--clave-tint-fg');
-			root.style.removeProperty('--clave-ambient');
+			// Marketing route gets the Violet brand color so first-time
+			// visitors see a deliberate brand tint, not the neutral default.
+			// Other routes (/connect, etc.) stay neutral when signed out.
+			if (page.url.pathname === '/') {
+				applyMarketingTheme();
+			} else {
+				clearMarketingTheme();
+			}
 			return;
 		}
 		const theme = themeForPubkey(activePubkey);
