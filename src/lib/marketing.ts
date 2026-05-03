@@ -18,6 +18,18 @@ export const DEMO_PUBKEY =
 
 // External URLs.
 export const TESTFLIGHT_URL = 'https://testflight.apple.com/join/5Mx5AZx7';
+// Set this when Clave ships to the App Store. While undefined, surfaces that
+// recommend installing Clave fall back to TESTFLIGHT_URL via CLAVE_INSTALL_URL.
+export const CLAVE_APP_STORE_URL: string | undefined = undefined;
+// Use this anywhere we want "the recommended way to install Clave for end users".
+// Resolves to App Store if set, TestFlight otherwise.
+export const CLAVE_INSTALL_URL: string = CLAVE_APP_STORE_URL ?? TESTFLIGHT_URL;
+// Human-readable label for the install link — "App Store" once Clave ships,
+// "TestFlight (beta)" while we're still gating distribution through TestFlight.
+export const CLAVE_INSTALL_LABEL: string = CLAVE_APP_STORE_URL ? 'App Store' : 'TestFlight (beta)';
+export const AMBER_PLAY_STORE_URL =
+	'https://play.google.com/store/apps/details?id=com.greenart7c3.nostrsigner';
+export const NSEC_APP_URL = 'https://nsec.app';
 export const CLAVE_REPO_URL = 'https://github.com/DocNR/clave';
 export const CLAVE_CASA_REPO_URL = 'https://github.com/DocNR/clave-casa';
 export const DESIGN_SYSTEM_URL =

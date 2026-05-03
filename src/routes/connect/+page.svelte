@@ -11,6 +11,12 @@
 	} from '$lib/signer';
 	import StatusPill from '$lib/components/StatusPill.svelte';
 	import { copyToClipboard } from '$lib/clipboard';
+	import {
+		AMBER_PLAY_STORE_URL,
+		CLAVE_INSTALL_LABEL,
+		CLAVE_INSTALL_URL,
+		NSEC_APP_URL
+	} from '$lib/marketing';
 
 	type Tab = 'qr' | 'paste';
 
@@ -30,9 +36,19 @@
 	let ncCopyTimer: ReturnType<typeof setTimeout> | undefined;
 	let ncAbort: AbortController | undefined;
 
+	// Inbound-URI fallback state. When a Universal Link from a third-party
+	// app (https://clave.casa/connect/?uri=nostrconnect://...) lands here
+	// because Clave isn't installed (or AASA hasn't propagated yet), we
+	// render the URI as a QR for the user's actually-installed signer to
+	// scan. clave.casa is just a transit display in this flow — the original
+	// client (e.g. nostrudel) is listening on the URI's relay for the ack.
+	let inboundUri = $state('');
+	let inboundQrSvg = $state('');
+	let inboundCopied = $state(false);
+	let inboundCopyTimer: ReturnType<typeof setTimeout> | undefined;
+
 	onMount(() => {
-		// If the iOS-side helper sent us here with #bunker=..., consume it
-		// immediately and scrub from the URL bar before any logging picks it up.
+		// (1) iOS helper handoff via #bunker= fragment — same handler as before.
 		const fragment = location.hash.slice(1);
 		if (fragment) {
 			const params = new URLSearchParams(fragment);
@@ -44,7 +60,35 @@
 				return;
 			}
 		}
-		// Default tab: kick off the nostrconnect flow so the QR is ready
+
+		// (2) Universal-Link fallback via ?uri= query param. iOS Clave intercepts
+		// this URL shape directly when installed (per AASA scoping); when it
+		// doesn't, Safari opens it here. We recognize both bunker:// (third
+		// party sending us a bunker to use as a client) and nostrconnect://
+		// (third party generated a nostrconnect URI for our signer to consume).
+		const queryUri = new URLSearchParams(location.search).get('uri');
+		if (queryUri) {
+			// Scrub the query from the URL bar — mirrors the #bunker= scrubbing
+			// pattern. Same reason: avoid leaking the URI into Cloudflare logs
+			// via referrer or browser history.
+			history.replaceState(null, '', '/connect');
+			if (queryUri.startsWith('bunker://')) {
+				tab = 'paste';
+				handoffBunker(queryUri);
+				return;
+			}
+			if (queryUri.startsWith('nostrconnect://')) {
+				void renderInboundUri(queryUri);
+				return;
+			}
+			// Unknown scheme — surface inline error, fall through to default UI.
+			status = 'error';
+			errorMessage =
+				"That link's URI scheme isn't recognized. Expected bunker:// or nostrconnect://.";
+			return;
+		}
+
+		// (3) Default: kick off our own nostrconnect flow so the QR is ready
 		// when the user looks at the page.
 		startNostrConnectFlow();
 	});
@@ -52,7 +96,38 @@
 	onDestroy(() => {
 		ncAbort?.abort();
 		stopElapsedTimer();
+		if (inboundCopyTimer) clearTimeout(inboundCopyTimer);
 	});
+
+	// Inbound-URI flow: render the third-party-generated nostrconnect URI as
+	// a QR code so the user's signer (which is presumably NOT Clave, since
+	// otherwise the Universal Link would have intercepted) can scan it. The
+	// original client (e.g. nostrudel) is listening on the URI's relay for
+	// the signer's ack — clave.casa just displays the QR and steps aside.
+	async function renderInboundUri(uri: string) {
+		inboundUri = uri;
+		// Stop the outbound nostrconnect flow if it kicked off — we're not
+		// generating our own URI in this mode.
+		ncAbort?.abort();
+		try {
+			inboundQrSvg = await QRCode.toString(uri, {
+				type: 'svg',
+				errorCorrectionLevel: 'M',
+				margin: 1
+			});
+		} catch (e) {
+			console.warn('[clave.casa] inbound QR render failed:', e);
+		}
+	}
+
+	async function copyInboundUri() {
+		if (!inboundUri) return;
+		const ok = await copyToClipboard(inboundUri);
+		if (!ok) return;
+		inboundCopied = true;
+		if (inboundCopyTimer) clearTimeout(inboundCopyTimer);
+		inboundCopyTimer = setTimeout(() => (inboundCopied = false), 1600);
+	}
 
 	function startElapsedTimer() {
 		elapsedSec = 0;
@@ -201,14 +276,136 @@
 </script>
 
 <div class="mx-auto max-w-md space-y-5 py-6">
-	<header class="space-y-2">
-		<!-- text-3xl matches /edit page heading per design-system.md §3 typography table. -->
-		<h1 class="text-3xl font-semibold">Connect a signer</h1>
-		<p class="text-sm text-[var(--clave-text-muted)]">
-			Sign in with a NIP-46 signer (Clave, Amber, nsec.app). Your private key never leaves the
-			signer.
+	{#if inboundUri}
+		<!-- Inbound-URI fallback: a third-party app sent the user here via a
+		     Universal Link, but Clave isn't intercepting (not installed, AASA
+		     not yet propagated, or both). Render the URI as a QR for whatever
+		     signer the user actually has, plus install links for users who
+		     have no signer at all. -->
+		<header class="space-y-2">
+			<h1 class="text-3xl font-semibold">Open in your signer</h1>
+			<p class="text-sm text-[var(--clave-text-muted)]">
+				A Nostr app sent you a connection request. Scan this code with your signer to complete
+				the connection — clave.casa is just displaying the request.
+			</p>
+		</header>
+
+		<div
+			class="space-y-4 rounded-2xl border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] p-4"
+		>
+			<div class="flex justify-center">
+				{#if inboundQrSvg}
+					<div class="rounded-2xl bg-white p-3 shadow-sm">
+						{@html inboundQrSvg.replace('<svg ', '<svg class="h-56 w-56" ')}
+					</div>
+				{:else}
+					<div
+						class="flex h-56 w-56 items-center justify-center rounded-2xl bg-[var(--clave-surface)]"
+					>
+						<p class="text-xs text-[var(--clave-text-muted)]">Generating…</p>
+					</div>
+				{/if}
+			</div>
+			<button
+				type="button"
+				onclick={copyInboundUri}
+				title="Copy connect string"
+				class="flex w-full items-center justify-between gap-2 rounded-xl border border-[var(--clave-border)] bg-[var(--clave-surface)] px-3 py-2 text-left font-mono text-xs text-[var(--clave-text-muted)] hover:text-[var(--clave-tint)]"
+			>
+				<span class="truncate">{inboundUri}</span>
+				{#if inboundCopied}
+					<svg viewBox="0 0 16 16" class="h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden="true">
+						<path
+							d="M3 8.5l3.5 3.5 6.5-7"
+							stroke="currentColor"
+							stroke-width="2"
+							fill="none"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
+					</svg>
+				{:else}
+					<svg viewBox="0 0 16 16" class="h-3.5 w-3.5 shrink-0 opacity-50" aria-hidden="true">
+						<rect
+							x="4.5"
+							y="4.5"
+							width="7"
+							height="9"
+							rx="1.5"
+							stroke="currentColor"
+							stroke-width="1.4"
+							fill="none"
+						/>
+						<path
+							d="M6.5 4.5V3a1 1 0 011-1h4a1 1 0 011 1v8a1 1 0 01-1 1h-1.5"
+							stroke="currentColor"
+							stroke-width="1.4"
+							fill="none"
+							stroke-linecap="round"
+						/>
+					</svg>
+				{/if}
+			</button>
+		</div>
+
+		<section
+			class="space-y-3 rounded-2xl border border-[var(--clave-border)] bg-[var(--clave-surface)] p-4"
+		>
+			<p class="text-sm font-semibold text-[var(--clave-text)]">Don't have a signer?</p>
+			<p class="text-xs text-[var(--clave-text-muted)]">
+				A NIP-46 signer holds your nsec and approves signing requests on your behalf. Install
+				one of these:
+			</p>
+			<ul class="space-y-2 text-sm">
+				<li>
+					<a
+						href={CLAVE_INSTALL_URL}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="text-[var(--clave-tint)] hover:underline"
+					>
+						<strong>Clave</strong>
+					</a>
+					<span class="text-[var(--clave-text-muted)]">— iOS, {CLAVE_INSTALL_LABEL}</span>
+				</li>
+				<li>
+					<a
+						href={AMBER_PLAY_STORE_URL}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="text-[var(--clave-tint)] hover:underline"
+					>
+						<strong>Amber</strong>
+					</a>
+					<span class="text-[var(--clave-text-muted)]">— Android, Play Store</span>
+				</li>
+				<li>
+					<a
+						href={NSEC_APP_URL}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="text-[var(--clave-tint)] hover:underline"
+					>
+						<strong>nsec.app</strong>
+					</a>
+					<span class="text-[var(--clave-text-muted)]">— web, no install</span>
+				</li>
+			</ul>
+		</section>
+
+		<p class="text-xs text-[var(--clave-text-muted)]">
+			Already have Clave installed? The handoff cache may still be propagating (~24h). Try the
+			link again in a few hours, or scan the code above with another device's signer.
 		</p>
-	</header>
+	{:else}
+		<header class="space-y-2">
+			<!-- text-3xl matches /edit page heading per design-system.md §3 typography table. -->
+			<h1 class="text-3xl font-semibold">Connect a signer</h1>
+			<p class="text-sm text-[var(--clave-text-muted)]">
+				Sign in with a NIP-46 signer (Clave, Amber, nsec.app). Your private key never leaves the
+				signer.
+			</p>
+		</header>
 
 	<!-- Tabs -->
 	<div
@@ -362,14 +559,15 @@
 		</div>
 	{/if}
 
-	<details class="text-sm text-[var(--clave-text-muted)]">
-		<summary class="cursor-pointer">Need a signer?</summary>
-		<ul class="ml-4 mt-2 list-disc space-y-1">
-			<li><strong>Clave</strong> (iOS) — tap your account, then “Connect a client”.</li>
-			<li><strong>Amber</strong> (Android) — in app settings, generate a bunker URI.</li>
-			<li><strong>nsec.app</strong> — create or import a key, then copy a bunker URI.</li>
-		</ul>
-	</details>
+		<details class="text-sm text-[var(--clave-text-muted)]">
+			<summary class="cursor-pointer">Need a signer?</summary>
+			<ul class="ml-4 mt-2 list-disc space-y-1">
+				<li><strong>Clave</strong> (iOS) — tap your account, then "Connect a client".</li>
+				<li><strong>Amber</strong> (Android) — in app settings, generate a bunker URI.</li>
+				<li><strong>nsec.app</strong> — create or import a key, then copy a bunker URI.</li>
+			</ul>
+		</details>
+	{/if}
 </div>
 
 <style>
