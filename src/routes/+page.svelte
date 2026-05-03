@@ -8,6 +8,7 @@
 	import { goto } from '$app/navigation';
 	import { loadConnections, getActiveConnection } from '$lib/connections';
 	import HeroPhone from '$lib/components/marketing/HeroPhone.svelte';
+	import EditorMockup from '$lib/components/marketing/EditorMockup.svelte';
 	import { TESTFLIGHT_URL } from '$lib/marketing';
 
 	// Preserve the original auto-redirect: signed-in users with an active
@@ -172,5 +173,34 @@
 				</p>
 			</li>
 		</ol>
+	</section>
+
+	<!-- 4. Or edit your profile from any browser (clave.casa intro) -->
+	<section>
+		<h2 class="mb-6 text-2xl font-semibold tracking-tight" style="color: var(--clave-text)">
+			Or edit your profile from any browser
+		</h2>
+		<div class="grid gap-8 sm:grid-cols-2 sm:items-center">
+			<div class="space-y-4">
+				<p class="text-base leading-relaxed" style="color: var(--clave-text)">
+					There's also <strong>clave.casa</strong> — a free web tool for editing your kind 0 Nostr
+					profile. Picture, name, bio, NIP-05, Lightning address — all of it.
+				</p>
+				<p class="text-sm leading-relaxed" style="color: var(--clave-text-muted)">
+					Signed by Clave on your phone, or by any other NIP-46 signer (Amber on Android, nsec.app
+					on web).
+				</p>
+				<a
+					href="/connect"
+					class="inline-block rounded-xl border px-5 py-3 text-sm font-semibold transition-transform active:scale-95"
+					style="border-color: var(--clave-border); color: var(--clave-text)"
+				>
+					Edit your profile
+				</a>
+			</div>
+			<div>
+				<EditorMockup />
+			</div>
+		</div>
 	</section>
 </div>
