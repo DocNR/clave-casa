@@ -17,10 +17,7 @@ export const DEMO_PUBKEY =
 	'c0000003c0000000000000000000000000000000000000000000000000000003';
 
 // External URLs.
-// TODO: replace TESTFLIGHT_URL with the public TestFlight invite link
-// once available; the bare apex shows Apple's TestFlight marketing page
-// which is a reasonable fallback in the meantime.
-export const TESTFLIGHT_URL = 'https://testflight.apple.com/';
+export const TESTFLIGHT_URL = 'https://testflight.apple.com/join/5Mx5AZx7';
 export const CLAVE_REPO_URL = 'https://github.com/DocNR/clave';
 export const CLAVE_CASA_REPO_URL = 'https://github.com/DocNR/clave-casa';
 export const DESIGN_SYSTEM_URL =

@@ -10,7 +10,7 @@ Open work, ordered roughly by priority.
 
 ## Marketing landing follow-ups (post-deploy)
 
-- [ ] **Real public TestFlight URL** — `src/lib/marketing.ts:TESTFLIGHT_URL` currently points to `https://testflight.apple.com/` (Apple's TestFlight marketing page) as a sensible fallback. Replace with the public invite link once available.
+- [x] **Real public TestFlight URL** — landed 2026-05-02. `src/lib/marketing.ts:TESTFLIGHT_URL` now points to `https://testflight.apple.com/join/5Mx5AZx7`.
 - [ ] **Replace `<EditorMockup />` with a real screenshot** — once we deploy and have a polished /edit page, capture a 1× and 2× PNG of the editor in a clean state, swap into section 4 of `src/routes/+page.svelte` via `<img>`. The component is built so this is a 1-line change.
 - [ ] **OG image at 1200×630** — for Twitter Card / Facebook share preview. Reuse the design-system Violet ambient gradient + "Clave" wordmark + tagline. Save to `static/og.png` and add `<meta property="og:image">` in the `<svelte:head>` of `src/routes/+page.svelte`.
 - [ ] **Clave iOS app icon SVG** — once available, replace the inline-SVG iPhone outline in `src/lib/components/marketing/HeroPhone.svelte` with the actual app icon (or supplement with it).
