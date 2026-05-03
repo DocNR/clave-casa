@@ -24,6 +24,14 @@ export const DESIGN_SYSTEM_URL =
 	'https://github.com/DocNR/clave-casa/blob/main/docs/design-system.md';
 export const NIP46_SPEC_URL = 'https://github.com/nostr-protocol/nips/blob/master/46.md';
 
+// Maintainer credit ("Made in the open and with love by …").
+// Hex of npub1xy54p83r6wnpyhs52xjeztd7qyyeu9ghymz8v66yu8kt3jzx75rqhf3urc.
+// We resolve the kind 0 display name at runtime via fetchLatestProfile;
+// while loading we render the npub-prefix as a graceful fallback.
+export const CREDIT_PUBKEY_HEX =
+	'3129509e23d3a6125e1451a5912dbe01099e151726c4766b44e1ecb8c846f506';
+export const CREDIT_NJUMP_URL = `https://njump.me/npub1xy54p83r6wnpyhs52xjeztd7qyyeu9ghymz8v66yu8kt3jzx75rqhf3urc`;
+
 /**
  * Apply Violet brand theme to :root for the marketing route.
  * Called from +layout.svelte when no account is active and we're on `/`.

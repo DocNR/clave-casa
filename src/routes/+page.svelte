@@ -6,16 +6,25 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { npubEncode } from 'nostr-tools/nip19';
 	import { loadConnections, getActiveConnection } from '$lib/connections';
+	import { fetchLatestProfile } from '$lib/propagation';
+	import { displayLabel } from '$lib/labels';
 	import HeroPhone from '$lib/components/marketing/HeroPhone.svelte';
 	import EditorMockup from '$lib/components/marketing/EditorMockup.svelte';
 	import {
 		TESTFLIGHT_URL,
 		CLAVE_REPO_URL,
 		CLAVE_CASA_REPO_URL,
-		DESIGN_SYSTEM_URL,
-		NIP46_SPEC_URL
+		NIP46_SPEC_URL,
+		CREDIT_PUBKEY_HEX,
+		CREDIT_NJUMP_URL
 	} from '$lib/marketing';
+
+	// Credit-line label, progressively enhanced. Defaults to the npub-prefix
+	// so the line renders immediately without waiting on a relay round-trip;
+	// gets overwritten with the kind 0 display_name once fetched.
+	let creditLabel = $state(npubEncode(CREDIT_PUBKEY_HEX).slice(0, 12));
 
 	// Preserve the original auto-redirect: signed-in users with an active
 	// connection skip the marketing page and go straight to /edit.
@@ -23,7 +32,21 @@
 		const conns = loadConnections();
 		if (conns.length > 0 && getActiveConnection()) {
 			goto('/edit', { replaceState: true });
+			return;
 		}
+		// Fetch maintainer's kind 0 to render their display name in the
+		// credit line. Best-effort: if the relays are slow or unreachable
+		// we keep the npub-prefix fallback.
+		void (async () => {
+			try {
+				const result = await fetchLatestProfile(CREDIT_PUBKEY_HEX);
+				if (result.status !== 'found') return;
+				const profile = JSON.parse(result.event.content);
+				creditLabel = displayLabel({ profile, pubkeyHex: CREDIT_PUBKEY_HEX });
+			} catch {
+				// ignore — keep the npub-prefix fallback
+			}
+		})();
 	});
 </script>
 
@@ -249,18 +272,6 @@
 					</div>
 				</div>
 			</li>
-			<li class="flex items-start gap-3">
-				<span class="text-xl leading-none" aria-hidden="true">🤖</span>
-				<div>
-					<div class="text-sm font-semibold" style="color: var(--clave-text)">
-						Robohash sees your npub when default avatars are rendered.
-					</div>
-					<div class="text-sm" style="color: var(--clave-text-muted)">
-						The npub is public anyway. If it bothers you, paste your own picture URL or remove the
-						picture.
-					</div>
-				</div>
-			</li>
 		</ul>
 	</section>
 
@@ -270,22 +281,9 @@
 			Built in the open
 		</h2>
 		<p class="max-w-2xl text-base leading-relaxed" style="color: var(--clave-text)">
-			Clave iOS and clave.casa are open source on GitHub. They share a
-			<a
-				class="underline hover:no-underline"
-				href={DESIGN_SYSTEM_URL}
-				target="_blank"
-				rel="noopener noreferrer">cross-platform design system</a
-			>, the AccountTheme palette, and the privacy promise. PRs welcome.
+			Clave iOS and clave.casa are open source on GitHub, both MIT-licensed. PRs welcome.
 		</p>
 		<p class="mt-3 text-sm" style="color: var(--clave-text-muted)">
-			<a
-				class="hover:underline"
-				href={CLAVE_REPO_URL}
-				target="_blank"
-				rel="noopener noreferrer">Clave iOS</a
-			>
-			·
 			<a
 				class="hover:underline"
 				href={CLAVE_CASA_REPO_URL}
@@ -295,9 +293,9 @@
 			·
 			<a
 				class="hover:underline"
-				href={DESIGN_SYSTEM_URL}
+				href={CLAVE_REPO_URL}
 				target="_blank"
-				rel="noopener noreferrer">Design system</a
+				rel="noopener noreferrer">Clave iOS</a
 			>
 			·
 			<a
@@ -306,6 +304,16 @@
 				target="_blank"
 				rel="noopener noreferrer">NIP-46 spec</a
 			>
+		</p>
+		<p class="mt-6 text-sm" style="color: var(--clave-text-muted)">
+			Made in the open and with love by
+			<a
+				class="underline hover:no-underline"
+				href={CREDIT_NJUMP_URL}
+				target="_blank"
+				rel="noopener noreferrer"
+				style="color: var(--clave-text)">{creditLabel}</a
+			>.
 		</p>
 	</section>
 </div>
@@ -321,18 +329,11 @@
 			class="hover:underline"
 			href={CLAVE_CASA_REPO_URL}
 			target="_blank"
-			rel="noopener noreferrer">GitHub</a
+			rel="noopener noreferrer">clave.casa</a
 		>
 		<span aria-hidden="true">·</span>
 		<a class="hover:underline" href={CLAVE_REPO_URL} target="_blank" rel="noopener noreferrer"
-			>iOS</a
-		>
-		<span aria-hidden="true">·</span>
-		<a
-			class="hover:underline"
-			href={DESIGN_SYSTEM_URL}
-			target="_blank"
-			rel="noopener noreferrer">Design system</a
+			>Clave iOS</a
 		>
 		<span aria-hidden="true">·</span>
 		<a class="hover:underline" href={TESTFLIGHT_URL} target="_blank" rel="noopener noreferrer"
