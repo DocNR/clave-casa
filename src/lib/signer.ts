@@ -159,6 +159,12 @@ export async function connectSigner(
 	activeBunkerRelays = [...bp.relays];
 	activeBp = bp;
 	activeLocalKey = localKey;
+
+	// Fire-and-forget: publish a kind 0 for the local NIP-46 client key so
+	// Clave (and any signer that resolves names via kind 0 lookup) shows
+	// "Clave.Casa" instead of the bare npub. One-time per local key.
+	void publishClientIdentityIfNeeded(localKey, bp.relays);
+
 	return { signer, userPubkey, bp };
 }
 
@@ -232,6 +238,13 @@ export async function connectViaNostrConnect(
 	activeBunkerRelays = [...bp.relays];
 	activeBp = bp;
 	activeLocalKey = localKey;
+
+	// Fire-and-forget kind 0 publish — see connectSigner for rationale. The
+	// nostrconnect URI already carried `name: clave.casa`, so this is mainly
+	// belt-and-suspenders for signers that prefer kind 0 lookup over URI
+	// metadata. Same per-local-key dedupe applies.
+	void publishClientIdentityIfNeeded(localKey, bp.relays);
+
 	return { signer, userPubkey, bp, uri };
 }
 
@@ -487,4 +500,62 @@ function loadOrCreateLocalKey(bunkerPubkey: string): Uint8Array {
 
 export function clearLocalKey(bunkerPubkey: string) {
 	localStorage.removeItem(LOCAL_KEY_PREFIX + bunkerPubkey);
+}
+
+// Publish a kind 0 metadata event for the local NIP-46 client keypair so the
+// signer can resolve "who is this connecting client?" via standard pubkey
+// lookup. Without this, signers see only the bare client npub for bunker://
+// pairs (the nostrconnect:// flow already carries `name` in the URI itself,
+// but bunker:// has no equivalent — the signer generated the URI and learned
+// nothing about us).
+//
+// One kind 0 per local key. Local keys are scoped per-bunker-pubkey
+// (loadOrCreateLocalKey), so this fires once per unique pairing — subsequent
+// reloads reuse the cached key and skip the publish via the localStorage flag.
+//
+// Fire and forget: relay-publish errors don't block the connect flow. Failure
+// just leaves the flag unset so the next connect retries.
+const KIND0_PUBLISHED_PREFIX = 'clave-casa.localKeyKind0Published.';
+
+const CLAVE_CASA_PROFILE = {
+	// NIP-01 username handle. Most clients fall back to this if `display_name`
+	// is unset. We keep it lowercase to match the domain.
+	name: 'clave.casa',
+	// NIP-24 display name. Capitalized form for friendlier in-app rendering.
+	display_name: 'Clave.Casa',
+	about: 'Web companion to Clave — kind 0 profile editor at https://clave.casa',
+	website: 'https://clave.casa'
+} as const;
+
+async function publishClientIdentityIfNeeded(
+	localKey: Uint8Array,
+	relays: string[]
+): Promise<void> {
+	if (typeof localStorage === 'undefined') return;
+	if (relays.length === 0) return;
+	const localPubkey = getPublicKey(localKey);
+	const flagKey = KIND0_PUBLISHED_PREFIX + localPubkey;
+	if (localStorage.getItem(flagKey)) return;
+
+	const event: VerifiedEvent = finalizeEvent(
+		{
+			kind: 0,
+			content: JSON.stringify(CLAVE_CASA_PROFILE),
+			tags: [],
+			created_at: Math.floor(Date.now() / 1000)
+		},
+		localKey
+	);
+
+	try {
+		await Promise.allSettled(getPool().publish(relays, event));
+		localStorage.setItem(flagKey, '1');
+		console.debug(
+			'[clave.casa] published client-identity kind 0 for local key',
+			localPubkey.slice(0, 8) + '…'
+		);
+	} catch (e) {
+		// Don't set the flag — next connect retries.
+		console.warn('[clave.casa] failed to publish client-identity kind 0:', e);
+	}
 }
