@@ -35,6 +35,14 @@ Open work, ordered roughly by priority.
 
 ## Soon
 
+- [ ] **Ecosystem outreach: PR Universal Link support to Nostr web clients.** Doc shipped at `docs/integrations.md` 2026-05-03 — drop-in 5-line change that fixes the `nostrconnect://` scheme-squatting issue. Targets, in rough order of likely traction:
+  - **POWR** (own project) — first integration, validates the flow end-to-end on a real client
+  - **nostrudel** — high-traffic web client, friendly maintainer (greenart7c3)
+  - **Snort** — another high-traffic web client
+  - **Coracle** — known to be receptive to NIP-46 work; also fixes their fresh-npub stall via the fallback page
+  - **Damus web** — if it picks up
+  - **iris.to**, **plebs.zone**, **Habla**, **Highlighter** — long tail
+  - PR template: link `docs/integrations.md` + paste the React/Svelte/Vue snippet that matches their stack + add a "Connect with Clave" button next to their existing nostrconnect QR. Each PR should add a single button, not replace anything. Track adoption status in a "Compatible clients" section in `README.md`.
 - [ ] **`/edit/relays`** — kind 10002 (NIP-65) editor. Highest impact of the deferred kinds because it lets users fix the "no relay list found" warning that appears in `/edit` today. Read/write list management + same three-tier publish + stale-scan tooling.
 - [ ] **`/edit/contacts`** — kind 3 contact list viewer + backup/restore. Phase 1: read-only listing with export. Phase 2: add/remove follows.
 - [ ] **`/p/<identifier>` public profile viewer** — render any account's kind 0 by `npub`, hex pubkey, or NIP-05 (`<local>@<domain>`). No auth required. Useful for sharing profile links.

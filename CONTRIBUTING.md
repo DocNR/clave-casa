@@ -36,15 +36,20 @@ npm run dev
 
 clave.casa shares its visual language with [Clave iOS](https://github.com/DocNR/clave). Before introducing new components, surfaces, or color treatments, read [`docs/design-system.md`](./docs/design-system.md) — it covers the AccountTheme palette + SHA-256 hash, identity-vs-functional zone philosophy, avatar treatments, modal patterns, and anti-patterns to avoid. iOS is the source of truth ([clave/docs/design-system.md](https://github.com/DocNR/clave/blob/main/docs/design-system.md)); the web doc records the small set of platform translations.
 
+## Integrating Clave into your own Nostr client
+
+If you build a Nostr client and want to add a one-tap "Connect with Clave" button, see [`docs/integrations.md`](./docs/integrations.md) for the drop-in code (5 lines, framework-agnostic). It explains why Universal Links via clave.casa are worth the bother (fixes the `nostrconnect://` scheme-squatting issue) and how to add the button without disrupting your existing nostrconnect flow.
+
 ## Testing strategy
 
-We don't currently ship automated tests. Verification today is:
+Verification today:
 
-1. `npm run check` (TypeScript + Svelte type-check)
-2. `npm run build` (production bundle succeeds)
-3. Manual exercise via the dev server with a real signer — connect, edit, save, publish, sync
+1. `npm run check` (TypeScript + Svelte type-check, zero errors / zero warnings is the bar)
+2. `npm test` (Vitest unit suite — currently covers AccountTheme palette + SHA-256 → palette index parity vs Clave iOS)
+3. `npm run build` (production bundle succeeds)
+4. Manual exercise via the dev server with a real signer — connect, edit, save, publish, sync
 
-Adding tests is in the backlog. If you want to lead that, say hi in an issue.
+When adding logic that has cross-platform implications (anything that produces a value users see across iOS and web — e.g. palette index, displayLabel resolution, pubkey-hue gradient), pin the expected output in `src/lib/theme.test.ts` (or a sibling test file) with a comment noting the iOS counterpart that must agree. Coverage gaps are tracked in BACKLOG under "Cleanup / tech debt".
 
 ## Privacy & security
 
