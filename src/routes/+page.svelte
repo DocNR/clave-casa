@@ -63,4 +63,114 @@
 			</a>
 		</div>
 	</section>
+
+	<!-- 2. What Clave does -->
+	<section>
+		<h2 class="mb-6 text-2xl font-semibold tracking-tight" style="color: var(--clave-text)">
+			What Clave does
+		</h2>
+		<div class="grid gap-4 sm:grid-cols-3">
+			<article
+				class="space-y-3 rounded-2xl border p-5"
+				style="border-color: var(--clave-border); background: var(--clave-surface)"
+			>
+				<div class="text-3xl" aria-hidden="true">🔒</div>
+				<h3 class="text-base font-semibold" style="color: var(--clave-text)">
+					Your nsec never leaves your phone
+				</h3>
+				<p class="text-sm" style="color: var(--clave-text-muted)">
+					Stored in the iOS Secure Enclave. Every signature is approved locally on your device.
+				</p>
+			</article>
+			<article
+				class="space-y-3 rounded-2xl border p-5"
+				style="border-color: var(--clave-border); background: var(--clave-surface)"
+			>
+				<div class="text-3xl" aria-hidden="true">👥</div>
+				<h3 class="text-base font-semibold" style="color: var(--clave-text)">
+					Multiple accounts, one signer
+				</h3>
+				<p class="text-sm" style="color: var(--clave-text-muted)">
+					Pair up to four Nostr identities and switch with a tap. Each gets its own gradient
+					identity.
+				</p>
+			</article>
+			<article
+				class="space-y-3 rounded-2xl border p-5"
+				style="border-color: var(--clave-border); background: var(--clave-surface)"
+			>
+				<div class="text-3xl" aria-hidden="true">🔋</div>
+				<h3 class="text-base font-semibold" style="color: var(--clave-text)">
+					Always ready, never draining
+				</h3>
+				<p class="text-sm" style="color: var(--clave-text-muted)">
+					Clave wakes only when an app needs you to sign. The rest of the time it's asleep — no
+					background activity, no battery drain.
+				</p>
+			</article>
+		</div>
+	</section>
+
+	<!-- 3. How it works -->
+	<section>
+		<h2 class="mb-6 text-2xl font-semibold tracking-tight" style="color: var(--clave-text)">
+			How it works
+		</h2>
+		<ol class="grid gap-4 sm:grid-cols-3">
+			<li
+				class="space-y-3 rounded-2xl border p-5"
+				style="border-color: var(--clave-border); background: var(--clave-surface)"
+			>
+				<div
+					class="flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold"
+					style="background: var(--clave-tint); color: var(--clave-tint-fg)"
+					aria-hidden="true"
+				>
+					1
+				</div>
+				<h3 class="text-base font-semibold" style="color: var(--clave-text)">
+					Install Clave on iPhone
+				</h3>
+				<p class="text-sm" style="color: var(--clave-text-muted)">
+					iOS 16+, free via TestFlight while we're in beta.
+				</p>
+			</li>
+			<li
+				class="space-y-3 rounded-2xl border p-5"
+				style="border-color: var(--clave-border); background: var(--clave-surface)"
+			>
+				<div
+					class="flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold"
+					style="background: var(--clave-tint); color: var(--clave-tint-fg)"
+					aria-hidden="true"
+				>
+					2
+				</div>
+				<h3 class="text-base font-semibold" style="color: var(--clave-text)">
+					Add your Nostr account
+				</h3>
+				<p class="text-sm" style="color: var(--clave-text-muted)">
+					Paste an existing nsec or generate a fresh one. It's encrypted and stored on your device.
+				</p>
+			</li>
+			<li
+				class="space-y-3 rounded-2xl border p-5"
+				style="border-color: var(--clave-border); background: var(--clave-surface)"
+			>
+				<div
+					class="flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold"
+					style="background: var(--clave-tint); color: var(--clave-tint-fg)"
+					aria-hidden="true"
+				>
+					3
+				</div>
+				<h3 class="text-base font-semibold" style="color: var(--clave-text)">
+					Sign from any client
+				</h3>
+				<p class="text-sm" style="color: var(--clave-text-muted)">
+					Scan a QR or paste a bunker URI from any NIP-46 compatible Nostr client. Tap to approve.
+				</p>
+			</li>
+		</ol>
+	</section>
 </div>
