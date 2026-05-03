@@ -1,0 +1,16 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["944AF56S27.dev.nostr.Clave"],
+        "components": [
+          {
+            "/": "/connect/",
+            "?": { "uri": "?*" },
+            "comment": "Universal Links handoff for nostrconnect:// — Clave handles clave.casa/connect/?uri=... to replace the Primal-squatted scheme. CRITICAL: must NOT broaden this scope. /edit, /edit#bunker=..., the marketing landing /, and any other path must stay routed to Safari/clave.casa. Only the inbound nostrconnect-replacement URL belongs to the iOS app."
+          }
+        ]
+      }
+    ]
+  }
+}

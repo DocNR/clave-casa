@@ -1,0 +1,11 @@
+# Cloudflare Pages custom headers (https://developers.cloudflare.com/pages/configuration/headers/)
+#
+# Files in static/ ship to the deploy verbatim; this file overrides the
+# default Content-Type for the AASA file, which has no extension and would
+# otherwise be served as application/octet-stream — iOS swcd silently
+# rejects anything that isn't application/json. Apple's AASA validator
+# fails the same way. This is the single most-common AASA setup gotcha.
+
+/.well-known/apple-app-site-association
+  Content-Type: application/json
+  Cache-Control: public, max-age=3600
