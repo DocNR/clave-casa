@@ -112,7 +112,7 @@
 		const bp = await parseBunkerInput(bunkerUri);
 		if (!bp) {
 			status = 'error';
-			errorMessage = 'That doesn’t look like a valid bunker URI.';
+			errorMessage = "That doesn't look like a valid bunker URI.";
 			return;
 		}
 		status = 'connecting';
@@ -202,7 +202,8 @@
 
 <div class="mx-auto max-w-md space-y-5 py-6">
 	<header class="space-y-2">
-		<h1 class="text-2xl font-semibold">Connect a signer</h1>
+		<!-- text-3xl matches /edit page heading per design-system.md §3 typography table. -->
+		<h1 class="text-3xl font-semibold">Connect a signer</h1>
 		<p class="text-sm text-[var(--clave-text-muted)]">
 			Sign in with a NIP-46 signer (Clave, Amber, nsec.app). Your private key never leaves the
 			signer.
@@ -235,11 +236,11 @@
 		<div
 			class="rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-900"
 		>
-			<p class="font-medium">Couldn’t connect</p>
+			<p class="font-semibold">Couldn't connect</p>
 			<p class="mt-1 whitespace-pre-line">{errorMessage}</p>
 			<button
 				type="button"
-				class="mt-3 text-sm underline"
+				class="mt-3 text-sm font-semibold text-[var(--clave-tint)] hover:opacity-80"
 				onclick={() => {
 					status = 'idle';
 					errorMessage = '';
@@ -253,7 +254,7 @@
 		>
 			<p class="text-sm text-[var(--clave-text-muted)]">
 				Open your NIP-46 signer and scan this QR code, or copy the connect string into the
-				signer’s remote-login field.
+				signer's remote-login field.
 			</p>
 			<div class="flex justify-center">
 				{#if ncQrSvg}
