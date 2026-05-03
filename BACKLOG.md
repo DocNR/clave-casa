@@ -5,8 +5,16 @@ Open work, ordered roughly by priority.
 ## Now (next session)
 
 - [ ] **Deploy to clave.casa** — set up Cloudflare Pages (or Vercel / GitHub Pages) on the `clave.casa` apex, point DNS, configure auto-deploy on `main` push. Static-only, no backend.
-- [ ] **Marketing landing page on clave.casa root** — currently `/` is a minimal "Connect" CTA. Real landing should explain who it's for, what NIP-46 is, link to Clave / Amber / nsec.app, screenshots, footer with privacy promise + GitHub link. Could live at `/` and push the connect-or-edit flow to `/app` (or keep current behavior of redirecting authenticated users straight to `/edit`).
+- [x] **Marketing landing page on clave.casa root** — shipped 2026-05-02. Clave-iOS-led, seven sections, real-component product mockup, no analytics. Spec at `docs/superpowers/specs/2026-05-02-marketing-landing-design.md`. Follow-ups under "Marketing landing follow-ups" below.
 - [ ] **Clave iOS new-account flow integration** — when a Clave user generates a fresh account, present an "Open profile editor" affordance that hands off to `clave.casa/connect#bunker=…`. Lands on `feat/multi-account` after that branch merges to `main`. Spec'd in `~/.claude/plans/are-there-any-nostr-gentle-ripple.md` (the original macro plan).
+
+## Marketing landing follow-ups (post-deploy)
+
+- [ ] **Real public TestFlight URL** — `src/lib/marketing.ts:TESTFLIGHT_URL` currently points to `https://testflight.apple.com/` (Apple's TestFlight marketing page) as a sensible fallback. Replace with the public invite link once available.
+- [ ] **Replace `<EditorMockup />` with a real screenshot** — once we deploy and have a polished /edit page, capture a 1× and 2× PNG of the editor in a clean state, swap into section 4 of `src/routes/+page.svelte` via `<img>`. The component is built so this is a 1-line change.
+- [ ] **OG image at 1200×630** — for Twitter Card / Facebook share preview. Reuse the design-system Violet ambient gradient + "Clave" wordmark + tagline. Save to `static/og.png` and add `<meta property="og:image">` in the `<svelte:head>` of `src/routes/+page.svelte`.
+- [ ] **Clave iOS app icon SVG** — once available, replace the inline-SVG iPhone outline in `src/lib/components/marketing/HeroPhone.svelte` with the actual app icon (or supplement with it).
+- [ ] **Marketing analytics? — only if privacy-preserving** — out of scope for v1 (design contract: zero third-party scripts). If we ever revisit, candidates: Plausible self-hosted, Simple Analytics, or just counting GitHub repo stars as a proxy. Before doing this, update the privacy section accordingly.
 
 ## Soon
 
