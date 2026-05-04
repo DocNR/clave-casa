@@ -184,10 +184,7 @@ export async function scanAndRebroadcast(
 	return report;
 }
 
-// Fetch the latest kind 0 for the user, used to pre-fill the editor. Queries
-// the user's NIP-65 read relays UNIONED with the bunker relay + broadcast
-// set, since the user's actual data is most likely on the bunker relay
-// regardless of what their NIP-65 declares.
+// Fetch the latest kind 0 for the user, used to pre-fill the editor.
 //
 // Returns a tagged status so the caller can distinguish *"confirmed no kind
 // 0 with this pubkey"* (`no-event` — safe to prefill defaults) from *"all
@@ -200,9 +197,42 @@ export type ProfileFetchResult =
 	| { status: 'no-event' }
 	| { status: 'failed' };
 
+// Tiered: Pass 1 queries the narrow set (NIP-65 reads + bunker URI relay +
+// broadcast set, ~6 relays). If that returns `'found'` we're done — typical
+// load is unchanged at ~1s. If Pass 1 came up empty/errored, Pass 2 retries
+// with SCAN_SET (16 relays) — adds ~5s but prevents silent data loss for
+// users whose kind:0 lives on uncommon relays (e.g. nostr.wine, mom, oxtr,
+// nostr.band — none in the default read set).
+//
+// The motivating bug: external tester reported clave.casa wiping their PFP
+// + banner after editing one field, because their kind:0 lived only on
+// relays outside the narrow set, fetch returned `no-event`, form populated
+// with empty fields + Robohash prefill, save published a fresh kind:0
+// missing the banner/picture they actually had.
 export async function fetchLatestProfile(userPubkey: string): Promise<ProfileFetchResult> {
+	// Pass 1: narrow set (current behavior — declared NIP-65 reads + bunker
+	// URI relay + broadcast set).
 	const declared = await getReadRelays(userPubkey);
-	const relays = Array.from(new Set([...declared, ...readDiscoveryRelays()]));
+	const narrow = Array.from(new Set([...declared, ...readDiscoveryRelays()]));
+	const first = await fetchKind0OnRelays(userPubkey, narrow);
+	if (first.status === 'found') return first;
+
+	// Pass 2: wider SCAN_SET only if Pass 1 came up empty or errored.
+	const wider = Array.from(new Set([...SCAN_SET, ...narrow]));
+	const second = await fetchKind0OnRelays(userPubkey, wider);
+	if (second.status === 'found') return second;
+	// `failed` carries more uncertainty than `no-event` — if either pass
+	// hit `failed`, surface that so the caller refuses to publish.
+	if (first.status === 'failed' || second.status === 'failed') {
+		return { status: 'failed' };
+	}
+	return { status: 'no-event' };
+}
+
+async function fetchKind0OnRelays(
+	userPubkey: string,
+	relays: string[]
+): Promise<ProfileFetchResult> {
 	const filter: Filter = { kinds: [METADATA_KIND], authors: [userPubkey], limit: 1 };
 	const maxWait = RELAY_TIMEOUT_MS;
 
