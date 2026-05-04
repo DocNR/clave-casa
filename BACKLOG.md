@@ -20,6 +20,10 @@ Open work, ordered roughly by priority.
 
 ## Soon
 
+- [ ] **Sync button visibility for users with NIP-65 published.** Currently the "Sync across Nostr" button is hidden when `nip65Present === true` (assumption: NIP-65 users' write relays already cover what they need). But users with NIP-65 may still want to push their kind:0 wider — to popular discovery relays (BROADCAST_SET) or to the SCAN_SET so other clients with different read-sets can find their profile. Make Sync available regardless of NIP-65 presence; possibly relabel ("Broadcast wider" or "Sync across more relays") to clarify it's additive on top of their declared write set. Reported during external-rollout review (build 51 ship day, 2026-05-04).
+
+- [ ] **Approach #3 follow-up to the kind:0 wipe hotfix:** full original-content merge on save. Today's hotfix (PR #1, `e9202fb`) covers the picture field via `pictureExplicitlySet` and warns on `no-event` via the confirm dialog, but doesn't address fields like banner/about/lud16 that still get dropped via `stripEmpty` if the loaded kind:0 was incomplete. Cleaner long-term fix: cache the parsed kind:0 on load in `originalContent`, then at save time merge form edits onto the original — only fields the user explicitly edited override the original; cleared-by-user fields are removed; unknown fields ride along untouched. Requires per-field "user edited" tracking. Queue for v0.2.2 of clave.casa.
+
 - [ ] **Ecosystem outreach: PR Universal Link support to Nostr web clients.** Doc shipped at `docs/integrations.md` 2026-05-03 — drop-in 5-line change that fixes the `nostrconnect://` scheme-squatting issue. Targets, in rough order of likely traction:
   - **POWR** (own project) — first integration, validates the flow end-to-end on a real client
   - **nostrudel** — high-traffic web client, friendly maintainer (greenart7c3)
