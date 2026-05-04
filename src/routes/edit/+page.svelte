@@ -93,7 +93,23 @@
 	let approvalWait = $state<{ attempt: number; startedAt: number } | undefined>(undefined);
 	let approvalElapsedSec = $state(0);
 	let approvalTickInterval: ReturnType<typeof setInterval> | undefined;
-	let fetchFailed = $state(false);
+	// Granular load status — replaces the older boolean fetchFailed. We need
+	// to distinguish 'no-event' (relays confirmed nothing) from 'failed'
+	// (timed out / errored) because they have different save semantics:
+	// 'failed' refuses to publish; 'no-event' warns but allows.
+	let loadStatus = $state<'idle' | 'found' | 'no-event' | 'failed'>('idle');
+	// User-visible flag: did the user click "Save anyway" past the no-event
+	// confirm dialog? Set true once they confirm; reset on each new load.
+	let confirmedNoEventSave = $state(false);
+	let noEventDialog: HTMLDialogElement | undefined = $state();
+	// Tracks whether fields.picture represents an explicit user choice
+	// (Apply-clicked in picture editor, OR loaded from existing kind:0
+	// with a real picture URL) versus a programmatic Robohash prefill
+	// for visual preview. Only explicit values are included in publish.
+	// Bug fix: the prefill used to leak into published kind:0 even when
+	// the user never engaged the picture editor — silently overwriting
+	// the user's actual picture URL with a Robohash they never chose.
+	let pictureExplicitlySet = $state(false);
 	// Reactive mirror of the localStorage Robohash set so the picker's
 	// active-state highlighting updates immediately when the user clicks
 	// a different style.
@@ -141,7 +157,9 @@
 		lastSavedEvent = undefined;
 		clearApprovalTick();
 		loadError = '';
-		fetchFailed = false;
+		loadStatus = 'idle';
+		confirmedNoEventSave = false;
+		pictureExplicitlySet = false;
 		phase = 'loading';
 
 		try {
@@ -243,11 +261,11 @@
 			// real data we couldn't see.
 			loadError =
 				'Could not load your existing profile data. Check your connection and refresh — saving now would overwrite anything your kind 0 already has.';
-			fetchFailed = true;
+			loadStatus = 'failed';
 			return;
 		}
 
-		fetchFailed = false;
+		loadStatus = result.status === 'found' ? 'found' : 'no-event';
 		if (result.status === 'found') {
 			try {
 				const parsed = JSON.parse(result.event.content) as Record<string, unknown>;
@@ -281,6 +299,10 @@
 				}
 				fields = next;
 				extraFields = extras;
+				// The loaded kind:0 had a real picture — that's the user's
+				// explicit current value. Mark it so we keep publishing it
+				// even if they don't engage the picture editor.
+				if (next.picture) pictureExplicitlySet = true;
 				if (conn && (next.display_name || next.name || next.picture)) {
 					const updated = {
 						...conn,
@@ -298,8 +320,11 @@
 		}
 
 		// status === 'no-event' OR 'found' but kind 0 had no picture →
-		// safely prefill the picture field so the user can SEE the Robohash
-		// URL that would be published if they save without changes.
+		// prefill the picture field with Robohash so the user can SEE what
+		// their default avatar looks like. This is VISUAL ONLY:
+		// pictureExplicitlySet stays false, so save() won't include this
+		// programmatic URL in the published kind:0 unless the user opens
+		// the picture editor and clicks Apply (which sets the flag).
 		if (!fields.picture) {
 			fields.picture = defaultAvatarUrl(userPubkey);
 		}
@@ -309,9 +334,18 @@
 		if (phase !== 'editing') return;
 		// Refuse to publish if the existing kind 0 couldn't be loaded — saving
 		// blind would silently overwrite whatever's actually on relays.
-		if (fetchFailed) {
+		if (loadStatus === 'failed') {
 			loadError =
 				'Existing profile data didn’t load — refresh and retry before saving so we don’t overwrite anything.';
+			return;
+		}
+		// Soft gate: kind:0 lookup confirmed nothing on the relays we checked,
+		// but the user might have published it via another client to relays
+		// outside our SCAN_SET. Surface the risk + let them confirm before
+		// publishing what would be a fresh-state kind:0 (any fields not in
+		// the form will be missing).
+		if (loadStatus === 'no-event' && !confirmedNoEventSave) {
+			noEventDialog?.showModal();
 			return;
 		}
 		let active = getActiveSigner();
@@ -371,7 +405,14 @@
 		// field, the kind 0 publishes with no `picture` key (stripEmpty
 		// drops empty strings) — clean opt-out for users who don't want
 		// a PFP at all.
-		const fieldsToPublish = fields;
+		//
+		// pictureExplicitlySet gate: when the picture field still holds a
+		// programmatic Robohash prefill (user never engaged the picture
+		// editor), strip it out of the publish so we don't accidentally
+		// overwrite their actual picture URL stored elsewhere on relays we
+		// didn't query. Visual prefill stays — only the publish payload is
+		// guarded.
+		const fieldsToPublish = pictureExplicitlySet ? fields : { ...fields, picture: '' };
 		const content = JSON.stringify({ ...cleanExtras, ...stripEmpty(fieldsToPublish) });
 		try {
 			const signed = await signEventViaBunker(
@@ -518,6 +559,10 @@
 
 	function applyPictureEdit() {
 		fields.picture = editingPictureUrl.trim();
+		// Apply-clicked = explicit user choice. Includes "Remove picture"
+		// (sets editingPictureUrl to '' then Apply) — clearing intentionally
+		// is just as explicit as setting a URL.
+		pictureExplicitlySet = true;
 		pictureEditorOpen = false;
 	}
 
@@ -707,8 +752,8 @@
 			<div class="flex items-center gap-3 pt-2">
 				<button
 					type="submit"
-					disabled={phase === 'publishing' || fetchFailed}
-					title={fetchFailed
+					disabled={phase === 'publishing' || loadStatus === 'failed'}
+					title={loadStatus === 'failed'
 						? 'Refresh the page to load existing data before saving'
 						: undefined}
 					class="rounded-xl bg-[var(--clave-tint)] px-4 py-2.5 text-sm font-semibold text-[var(--clave-tint-fg)] hover:opacity-90 disabled:opacity-50"
@@ -870,6 +915,50 @@
 				class="rounded-xl bg-[var(--clave-tint)] px-4 py-2 text-sm font-semibold text-[var(--clave-tint-fg)] hover:opacity-90"
 			>
 				Apply
+			</button>
+		</div>
+	</div>
+</dialog>
+
+<!-- No-event confirm dialog. Shown before publish when fetchLatestProfile
+     returned no-event status (no kind:0 found on any of the queried relays,
+     including the wider SCAN_SET fallback). User might still have a kind:0
+     elsewhere on a private/uncommon relay we don't query, so we warn that
+     a fresh-state publish would replace it. They can confirm to proceed
+     anyway, or cancel. -->
+<dialog
+	bind:this={noEventDialog}
+	class="fixed inset-0 m-auto rounded-2xl border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] p-0 text-[var(--clave-text-muted)] shadow-2xl backdrop:bg-black/40 backdrop:backdrop-blur-sm"
+>
+	<div class="w-[min(480px,calc(100vw-2rem))] p-5">
+		<h2 class="text-base font-semibold text-neutral-900 dark:text-neutral-100">
+			No existing profile found
+		</h2>
+		<p class="mt-3 text-sm">
+			We couldn't find an existing kind:0 for this account on the relays we checked
+			(including the wider fallback set). If you've published a profile via another
+			Nostr client to a relay we don't query, saving now will create a fresh kind:0
+			— and any fields not in this form will be missing.
+		</p>
+		<p class="mt-2 text-sm">If you're sure this is your first profile publish, go ahead.</p>
+		<div class="mt-5 flex flex-wrap items-center justify-end gap-2">
+			<button
+				type="button"
+				onclick={() => noEventDialog?.close()}
+				class="rounded-xl border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] px-4 py-2 text-sm font-medium hover:bg-[var(--clave-surface)]"
+			>
+				Cancel
+			</button>
+			<button
+				type="button"
+				onclick={() => {
+					confirmedNoEventSave = true;
+					noEventDialog?.close();
+					void save();
+				}}
+				class="rounded-xl bg-[var(--clave-tint)] px-4 py-2 text-sm font-semibold text-[var(--clave-tint-fg)] hover:opacity-90"
+			>
+				Save anyway
 			</button>
 		</div>
 	</div>
