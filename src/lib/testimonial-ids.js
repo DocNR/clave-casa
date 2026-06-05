@@ -16,5 +16,7 @@ export const TESTIMONIAL_EVENT_IDS = [
 	// Bfgreen — "Nice, signing web clients using #clave on iOS."
 	'9bf0eed4561ead5eaad694d6434cb3524258111c0989edcfd868aecaeb27f992',
 	// djmeistro — "Been using #clave with my iOS device and it's really good!"
-	'864c4faf144c3b37d8abe6120e206fa55788f75b8943ae3e16c7b8c17aad138a'
+	'864c4faf144c3b37d8abe6120e206fa55788f75b8943ae3e16c7b8c17aad138a',
+	// (author resolved live) — newly curated #clave note
+	'0735fbe198f27b409f9915d558e14b5ceb8f519e974de2fe9ea95fc6c494e02f'
 ];
