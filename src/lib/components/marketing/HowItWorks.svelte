@@ -4,7 +4,7 @@
 	const steps = [
 		{ n: 1, title: 'Install Clave on iPhone', body: 'iOS 16+, free via TestFlight while we are in beta.' },
 		{ n: 2, title: 'Add your Nostr account', body: 'Paste an existing nsec or generate a fresh one. It is stored in the Secure Enclave on your device.' },
-		{ n: 3, title: 'Sign from any client', body: 'Scan a QR or paste a bunker URI from any NIP-46 client. Tap to approve.' }
+		{ n: 3, title: 'Sign on behalf of your clients', body: 'Connect a NIP-46 client with a QR code or bunker URI. When it needs a signature, Clave asks you — tap to approve.' }
 	];
 </script>
 

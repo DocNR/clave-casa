@@ -46,6 +46,7 @@ export const CREDIT_NJUMP_URL = `https://njump.me/npub1xy54p83r6wnpyhs52xjeztd7q
 export const FEATURED_NOTE = {
 	lead: 'Hello Nostr.',
 	emphasis: 'The keys stayed home today.',
+	hashtag: '#clave',
 	author: 'Clave',
 	verifyUrl:
 		'https://njump.me/nevent1qqsw7y6z9pmnpmcz0de2g5tha7nqz3y326t5n856x5yj2xrqurdushqd5vp45'
@@ -89,7 +90,7 @@ export const FEATURE_ROWS: readonly FeatureRowContent[] = [
 		eyebrow: 'Secure Enclave',
 		title: 'Your nsec never leaves your phone',
 		body: 'Your private key is generated and stored in the iOS Secure Enclave. Every signature is produced locally on your device — clave.casa, relays, and the apps you use never see it.',
-		bullets: ['Hardware-backed key storage', 'No key export, ever', 'Nothing to leak server-side'],
+		bullets: ['Hardware-backed key storage', 'No key export unless you want it', 'Nothing to leak server-side'],
 		accent: 0,
 		glow: 'violet'
 	},
@@ -105,23 +106,31 @@ export const FEATURE_ROWS: readonly FeatureRowContent[] = [
 		eyebrow: 'Multi-account',
 		title: 'Many identities, one signer',
 		body: 'Pair several Nostr accounts and switch between them with a tap. Each identity gets its own deterministic gradient, so you always know which key is about to sign.',
-		bullets: ['Up to multiple accounts', 'A distinct gradient per identity', 'Same colors on iOS and on the web'],
+		bullets: ['Up to 4 accounts', 'A distinct gradient per identity', 'Same colors on iOS and on the web'],
 		accent: 1,
 		glow: 'teal'
 	},
 	{
 		eyebrow: 'NIP-46',
-		title: 'Works with any Nostr client',
-		body: 'Clave is a standard NIP-46 remote signer. Scan a QR code or paste a bunker URI from any compatible client and it just connects — no browser extension, no copy-pasting keys.',
-		bullets: ['Scan a QR or paste a bunker URI', 'No extension required', 'Compatible across the NIP-46 ecosystem'],
+		title: 'Works with most Nostr clients',
+		body: 'Clave is a standard NIP-46 remote signer. Scan a QR code or paste a bunker URI from a client that supports NIP-46 and it just connects — Clave signs on its behalf. No browser extension, no copy-pasting keys.',
+		bullets: ['Scan a QR or paste a bunker URI', 'Signs on behalf of any NIP-46 client', 'No browser extension required'],
 		accent: 7,
 		glow: 'violet'
 	},
 	{
-		eyebrow: 'Battery-friendly',
-		title: 'Always ready, never draining',
-		body: 'Clave wakes only when an app needs you to sign, handles the request, and goes back to sleep. No background polling, no battery drain.',
-		bullets: ['Push-woken, not always-on', 'No background battery cost', 'Instant when you need it'],
+		eyebrow: 'Home Screen apps',
+		title: 'Use Nostr web apps the way they’re meant to be',
+		body: 'Because Clave signs remotely over NIP-46, you can add a Nostr web app to your Home Screen and launch it like a native app. Browser extensions (NIP-07) can’t do this — they rely on window.nostr, which a standalone PWA never sees.',
+		bullets: ['Launch web clients from your Home Screen', 'Full-screen and native-like, no browser chrome', 'No window.nostr or extension required'],
+		accent: 2,
+		glow: 'sky'
+	},
+	{
+		eyebrow: 'Open or closed',
+		title: 'Signs whether the app is open or closed',
+		body: 'Clave works in the background. A push notification wakes it the moment a client needs a signature — whether Clave is open, backgrounded, or your phone is locked — it handles the request and goes back to sleep. No polling, no battery drain.',
+		bullets: ['Works in the background, even when closed', 'Push-woken, not always-on', 'No background battery cost'],
 		accent: 8,
 		glow: 'teal'
 	}
