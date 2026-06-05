@@ -23,6 +23,12 @@ describe('cleanContent', () => {
 	it('strips nostr: mentions and collapses whitespace', () => {
 		expect(cleanContent(ev().content)).toBe('Clave is great really');
 	});
+
+	it('strips trailing media URLs', () => {
+		expect(cleanContent('Works flawlessly! #clave https://image.nostr.build/abc.jpg')).toBe(
+			'Works flawlessly! #clave'
+		);
+	});
 });
 
 describe('normalizeTestimonial', () => {

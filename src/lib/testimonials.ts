@@ -9,8 +9,17 @@ import { neventEncode } from 'nostr-tools/nip19';
 import { getPool } from './signer';
 import { SCAN_SET } from './relays';
 
-// Hand-picked event ids (hex) of real notes about Clave. Empty until sourced.
-export const TESTIMONIAL_EVENT_IDS: readonly string[] = [];
+// Hand-picked event ids (hex) of real notes about Clave, in display order.
+// Sourced from the #clave hashtag, curated to genuine compliments and
+// verified live on relays (2026-06-05). Add more as organic praise grows.
+export const TESTIMONIAL_EVENT_IDS: readonly string[] = [
+	// Clave — "Hello Nostr. The keys stayed home today." (featured first)
+	'ef1342287730ef027b72a45177efa60144915697499e9a3509251860e0dbc85c',
+	// t0ken7 — "Running #Clave remote iOS signer flawlessly across eight clients!"
+	'b2b8eb67582aca68aa97851018b616d7fe62d9699e49a420683cf694e940deb3',
+	// Bfgreen — "Nice, signing web clients using #clave on iOS."
+	'9bf0eed4561ead5eaad694d6434cb3524258111c0989edcfd868aecaeb27f992'
+];
 
 export interface Testimonial {
 	eventId: string;
@@ -24,6 +33,7 @@ export interface Testimonial {
 export function cleanContent(content: string): string {
 	return content
 		.replace(/nostr:n(profile|pub|event|ote)1[a-z0-9]+/gi, '')
+		.replace(/https?:\/\/\S+/gi, '') // strip URLs (trailing media links etc.)
 		.replace(/\s{2,}/g, ' ')
 		.trim();
 }
