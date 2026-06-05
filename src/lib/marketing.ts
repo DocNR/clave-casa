@@ -65,3 +65,57 @@ export function clearMarketingTheme(): void {
 	root.style.removeProperty('--clave-tint-fg');
 	root.style.removeProperty('--clave-ambient');
 }
+
+// Feature-row content for the landing page. `accent` indexes PALETTE
+// (src/lib/theme.ts) so each row pulls a distinct Clave gradient.
+export interface FeatureRowContent {
+	eyebrow: string;
+	title: string;
+	body: string;
+	bullets: string[];
+	accent: number; // PALETTE index
+	glow: 'violet' | 'sky' | 'teal';
+}
+
+export const FEATURE_ROWS: readonly FeatureRowContent[] = [
+	{
+		eyebrow: 'Secure Enclave',
+		title: 'Your nsec never leaves your phone',
+		body: 'Your private key is generated and stored in the iOS Secure Enclave. Every signature is produced locally on your device — clave.casa, relays, and the apps you use never see it.',
+		bullets: ['Hardware-backed key storage', 'No key export, ever', 'Nothing to leak server-side'],
+		accent: 0,
+		glow: 'violet'
+	},
+	{
+		eyebrow: 'Approve to sign',
+		title: 'Nothing gets signed without you',
+		body: 'When a Nostr client asks for a signature, Clave shows you exactly what it is — the kind, the content, who is asking — and waits. Tap to approve, or decline.',
+		bullets: ['See every request in plain language', 'One tap to sign or reject', 'Set always-allow per app and kind'],
+		accent: 4,
+		glow: 'sky'
+	},
+	{
+		eyebrow: 'Multi-account',
+		title: 'Many identities, one signer',
+		body: 'Pair several Nostr accounts and switch between them with a tap. Each identity gets its own deterministic gradient, so you always know which key is about to sign.',
+		bullets: ['Up to multiple accounts', 'A distinct gradient per identity', 'Same colors on iOS and on the web'],
+		accent: 1,
+		glow: 'teal'
+	},
+	{
+		eyebrow: 'NIP-46',
+		title: 'Works with any Nostr client',
+		body: 'Clave is a standard NIP-46 remote signer. Scan a QR code or paste a bunker URI from any compatible client and it just connects — no browser extension, no copy-pasting keys.',
+		bullets: ['Scan a QR or paste a bunker URI', 'No extension required', 'Compatible across the NIP-46 ecosystem'],
+		accent: 7,
+		glow: 'violet'
+	},
+	{
+		eyebrow: 'Battery-friendly',
+		title: 'Always ready, never draining',
+		body: 'Clave wakes only when an app needs you to sign, handles the request, and goes back to sleep. No background polling, no battery drain.',
+		bullets: ['Push-woken, not always-on', 'No background battery cost', 'Instant when you need it'],
+		accent: 8,
+		glow: 'teal'
+	}
+];
