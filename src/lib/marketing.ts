@@ -89,6 +89,9 @@ export interface FeatureRowContent {
 	// Optional real screenshot (path under static/). When set, FeatureRow renders
 	// it inside the phone frame instead of the styled placeholder.
 	screenshot?: string;
+	// Optional second screenshot. When set, the row shows a two-phone cluster
+	// (screenshot behind, screenshot2 in front) instead of a single phone.
+	screenshot2?: string;
 }
 
 export const FEATURE_ROWS: readonly FeatureRowContent[] = [
@@ -135,7 +138,8 @@ export const FEATURE_ROWS: readonly FeatureRowContent[] = [
 		bullets: ['Launch web clients from your Home Screen', 'Full-screen and native-like, no browser chrome', 'No browser extension needed'],
 		accent: 2,
 		glow: 'sky',
-		screenshot: '/screenshots/home-screen.webp'
+		screenshot: '/screenshots/home-screen.webp',
+		screenshot2: '/screenshots/home-screen-logged-in.webp'
 	},
 	{
 		eyebrow: 'Open or closed',

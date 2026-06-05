@@ -37,14 +37,26 @@
 	</div>
 
 	<div use:reveal={{ delay: 120 }} class="flex justify-center {isEven ? '' : 'md:order-1'}">
-		<PhoneMockup tilt={tilt} glow={row.glow} src={row.screenshot}>
-			{#snippet screen()}
-				<div class="flex h-full flex-col items-center justify-center gap-3 p-6 text-center" style="background: linear-gradient(160deg, {theme.start}26, #0b0910);">
-					<div class="h-12 w-12 rounded-2xl" style="background: linear-gradient(135deg, {theme.start}, {theme.end})"></div>
-					<p class="font-display text-base font-semibold" style="color: var(--m-text)">{row.eyebrow}</p>
-					<p class="text-[10px] uppercase tracking-[0.2em]" style="color: var(--m-text-dim)">screenshot soon</p>
+		{#if row.screenshot2}
+			<!-- Two-phone cluster: first screenshot behind, second in front. -->
+			<div class="flex scale-[0.74] items-center justify-center sm:scale-90 lg:scale-100">
+				<div class="relative z-0">
+					<PhoneMockup tilt={-6} glow={row.glow} src={row.screenshot} float={false} />
 				</div>
-			{/snippet}
-		</PhoneMockup>
+				<div class="relative z-10 -ml-20 mt-10 sm:-ml-24">
+					<PhoneMockup tilt={6} glow={row.glow} src={row.screenshot2} float={false} />
+				</div>
+			</div>
+		{:else}
+			<PhoneMockup tilt={tilt} glow={row.glow} src={row.screenshot}>
+				{#snippet screen()}
+					<div class="flex h-full flex-col items-center justify-center gap-3 p-6 text-center" style="background: linear-gradient(160deg, {theme.start}26, #0b0910);">
+						<div class="h-12 w-12 rounded-2xl" style="background: linear-gradient(135deg, {theme.start}, {theme.end})"></div>
+						<p class="font-display text-base font-semibold" style="color: var(--m-text)">{row.eyebrow}</p>
+						<p class="text-[10px] uppercase tracking-[0.2em]" style="color: var(--m-text-dim)">screenshot soon</p>
+					</div>
+				{/snippet}
+			</PhoneMockup>
+		{/if}
 	</div>
 </div>
