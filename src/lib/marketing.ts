@@ -20,6 +20,9 @@ export const CLAVE_INSTALL_URL: string = CLAVE_APP_STORE_URL ?? TESTFLIGHT_URL;
 // Human-readable label for the install link — "App Store" once Clave ships,
 // "TestFlight (beta)" while we're still gating distribution through TestFlight.
 export const CLAVE_INSTALL_LABEL: string = CLAVE_APP_STORE_URL ? 'App Store' : 'TestFlight (beta)';
+// Short label for compact surfaces (e.g. the nav button on mobile) — drops the
+// "(beta)" qualifier so it stays tidy next to the logo.
+export const CLAVE_INSTALL_LABEL_SHORT: string = CLAVE_APP_STORE_URL ? 'App Store' : 'TestFlight';
 export const AMBER_PLAY_STORE_URL =
 	'https://play.google.com/store/apps/details?id=com.greenart7c3.nostrsigner';
 export const NSEC_APP_URL = 'https://nsec.app';
