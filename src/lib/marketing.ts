@@ -98,7 +98,8 @@ export const FEATURE_ROWS: readonly FeatureRowContent[] = [
 		body: 'Your private key is generated on your iPhone and kept in the iOS Keychain — device-only, so it never syncs to iCloud or lands in a backup. Every signature is produced locally; clave.casa, relays, and the apps you use never see it.',
 		bullets: ['Stored in the iOS Keychain', 'Device-only — never synced or backed up', 'No key export unless you want it'],
 		accent: 0,
-		glow: 'violet'
+		glow: 'violet',
+		screenshot: '/screenshots/account.webp'
 	},
 	{
 		eyebrow: 'Approve to sign',
@@ -106,7 +107,8 @@ export const FEATURE_ROWS: readonly FeatureRowContent[] = [
 		body: 'When a Nostr client asks for a signature, Clave shows you exactly what it is — the kind, the content, who is asking — and waits. Tap to approve, or decline.',
 		bullets: ['See every request in plain language', 'One tap to sign or reject', 'Set always-allow per app and kind'],
 		accent: 4,
-		glow: 'sky'
+		glow: 'sky',
+		screenshot: '/screenshots/approve.webp'
 	},
 	{
 		eyebrow: 'Multi-account',
@@ -140,6 +142,7 @@ export const FEATURE_ROWS: readonly FeatureRowContent[] = [
 		body: 'Clave works in the background. A push notification wakes it the moment a client needs a signature — whether Clave is open, backgrounded, or your phone is locked — it handles the request and goes back to sleep. No polling, no battery drain.',
 		bullets: ['Works in the background, even when closed', 'Push-woken, not always-on', 'No background battery cost'],
 		accent: 8,
-		glow: 'teal'
+		glow: 'teal',
+		screenshot: '/screenshots/activity.webp'
 	}
 ];
