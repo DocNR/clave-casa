@@ -9,13 +9,6 @@ import { ambientGradientCss, fgForHex, PALETTE } from './theme';
 export const MARKETING_BRAND_INDEX = 0; // Violet
 export const MARKETING_BRAND_THEME = PALETTE[MARKETING_BRAND_INDEX];
 
-// Demo pubkey for the EditorMockup avatar in section 4.
-// Picked so gradientIndexForPubkey() returns 0 (Violet ring) AND the
-// pubkey-hue interior lands in the purple range (271° / 271°). See
-// the design spec for derivation. Not a real Nostr account.
-export const DEMO_PUBKEY =
-	'c0000003c0000000000000000000000000000000000000000000000000000003';
-
 // External URLs.
 export const TESTFLIGHT_URL = 'https://testflight.apple.com/join/5Mx5AZx7';
 // Set this when Clave ships to the App Store. While undefined, surfaces that
