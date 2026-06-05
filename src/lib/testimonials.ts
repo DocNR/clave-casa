@@ -34,6 +34,7 @@ export function cleanContent(content: string): string {
 	return content
 		.replace(/nostr:n(profile|pub|event|ote)1[a-z0-9]+/gi, '')
 		.replace(/https?:\/\/\S+/gi, '') // strip URLs (trailing media links etc.)
+		.replace(/\s+([.,!?;:])/g, '$1') // tidy spaces left before punctuation after stripping
 		.replace(/\s{2,}/g, ' ')
 		.trim();
 }

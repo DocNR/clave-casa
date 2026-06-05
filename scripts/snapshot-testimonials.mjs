@@ -32,6 +32,7 @@ function cleanContent(content) {
 	return content
 		.replace(/nostr:n(profile|pub|event|ote)1[a-z0-9]+/gi, '')
 		.replace(/https?:\/\/\S+/gi, '')
+		.replace(/\s+([.,!?;:])/g, '$1')
 		.replace(/\s{2,}/g, ' ')
 		.trim();
 }
