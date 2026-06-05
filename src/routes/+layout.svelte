@@ -14,6 +14,14 @@
 	let activePubkey = $state<string | undefined>(undefined);
 	const isMarketing = $derived(page.url.pathname === '/');
 
+	// Paint the document canvas dark on the marketing route so overscroll
+	// (rubber-banding past the top/bottom) shows the page's dark bg, not white.
+	// Other routes keep the default light canvas.
+	$effect(() => {
+		document.documentElement.classList.toggle('marketing-bg', isMarketing);
+		return () => document.documentElement.classList.remove('marketing-bg');
+	});
+
 	onMount(() => {
 		const refresh = () => (activePubkey = getActivePubkey());
 		refresh();

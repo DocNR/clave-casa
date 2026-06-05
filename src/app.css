@@ -33,6 +33,14 @@
 	--font-display: 'Space Grotesk', var(--font-body, system-ui), sans-serif;
 }
 
+/* Dark document canvas for the marketing route ('/'), toggled on <html> by
+   +layout.svelte. Without this, overscroll past the top/bottom reveals the
+   default white canvas. Color matches .marketing-root's --m-bg (#0e0b16). */
+html.marketing-bg {
+	background-color: #0e0b16;
+	color-scheme: dark;
+}
+
 html {
 	/* System stack — macOS / iOS Safari render this as SF Pro Text, matching
 	   the Clave iOS app body copy. Other platforms get their native UI font. */

@@ -22,5 +22,13 @@
 		"picture": "https://image.nostr.build/d4eb84acc40f8e16582193c6a1bb0b95b37b755bc09e3d921a3e1c125e6952de.gif",
 		"content": "Been using #clave with my iOS device and it's really good! iOS users should check it out if they're looking for mobile remote signer!",
 		"nevent": "nevent1qgspupnmldvgyptkmu767l9s282yzxuq5zu05yhuy57dp26peudzq6gqyzrycna0z3xrkd7c40npyr3qd7j40z8htwy58t37zmrm3st645fc5y9k04t"
+	},
+	{
+		"eventId": "0735fbe198f27b409f9915d558e14b5ceb8f519e974de2fe9ea95fc6c494e02f",
+		"pubkey": "f7922a0adb3fa4dda5eecaa62f6f7ee6159f7f55e08036686c68e08382c34788",
+		"displayName": "ChadF and 33 others",
+		"picture": "https://podtards.com/5f9cbc7c25c4d1df2734e61678d5421964a20e92e136d49a56a695e30554cab9",
+		"content": "I've been waiting for a remote signer on iOS for awhile and I finally have one with. #clave",
+		"nevent": "nevent1qgs00y32ptdnlfxa5hhv4f30dalwv9vl0a27pqpkdpkx3cyrstp50zqqyqrnt7lpnre8ksylny2a2k8pfdwwhr63n6t5mch7n654l3kyjnsz7ayadrz"
 	}
 ]
