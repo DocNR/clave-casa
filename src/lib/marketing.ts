@@ -86,6 +86,9 @@ export interface FeatureRowContent {
 	bullets: string[];
 	accent: number; // PALETTE index
 	glow: 'violet' | 'sky' | 'teal';
+	// Optional real screenshot (path under static/). When set, FeatureRow renders
+	// it inside the phone frame instead of the styled placeholder.
+	screenshot?: string;
 }
 
 export const FEATURE_ROWS: readonly FeatureRowContent[] = [
@@ -111,7 +114,8 @@ export const FEATURE_ROWS: readonly FeatureRowContent[] = [
 		body: 'Pair several Nostr accounts and switch between them with a tap. Each identity gets its own deterministic gradient, so you always know which key is about to sign.',
 		bullets: ['Up to 4 accounts', 'A distinct gradient per identity', 'Same colors on iOS and on the web'],
 		accent: 1,
-		glow: 'teal'
+		glow: 'teal',
+		screenshot: '/screenshots/choose-accounts.webp'
 	},
 	{
 		eyebrow: 'NIP-46',
@@ -119,7 +123,8 @@ export const FEATURE_ROWS: readonly FeatureRowContent[] = [
 		body: 'Clave is a standard NIP-46 remote signer. Scan a QR code or paste a bunker URI from a client that supports NIP-46 and it just connects — Clave signs on its behalf. No browser extension, no copy-pasting keys.',
 		bullets: ['Scan a QR or paste a bunker URI', 'Signs on behalf of any NIP-46 client', 'No browser extension required'],
 		accent: 7,
-		glow: 'violet'
+		glow: 'violet',
+		screenshot: '/screenshots/pairing.webp'
 	},
 	{
 		eyebrow: 'Home Screen apps',

@@ -80,57 +80,19 @@
 		<div use:reveal={{ delay: 200 }} class="relative hidden lg:block">
 			<div class="relative mx-auto flex h-[560px] w-full max-w-md items-center justify-center">
 				<div class="absolute left-0 top-10">
-					<PhoneMockup tilt={-8} glow="sky">
-						{#snippet screen()}
-							{@render fauxScreen('Account switcher', 'switch identities')}
-						{/snippet}
-					</PhoneMockup>
+					<PhoneMockup tilt={-8} glow="sky" src="/screenshots/settings-accounts.webp" />
 				</div>
 				<div class="absolute right-0 top-24 z-10">
-					<PhoneMockup tilt={6} glow="teal">
-						{#snippet screen()}
-							{@render fauxScreen('Connect', 'scan a QR or paste a bunker URI')}
-						{/snippet}
-					</PhoneMockup>
+					<PhoneMockup tilt={6} glow="teal" src="/screenshots/approve-connection.webp" />
 				</div>
 				<div class="relative z-20">
-					<PhoneMockup tilt={-2} glow="violet">
-						{#snippet screen()}
-							{@render approvalScreen()}
-						{/snippet}
-					</PhoneMockup>
+					<PhoneMockup tilt={-2} glow="violet" src="/screenshots/home.webp" />
 				</div>
 			</div>
 		</div>
 		<div use:reveal={{ delay: 300 }} class="flex justify-center lg:hidden">
-			<PhoneMockup tilt={-2} glow="violet">
-				{#snippet screen()}
-					{@render approvalScreen()}
-				{/snippet}
-			</PhoneMockup>
+			<PhoneMockup tilt={-2} glow="violet" src="/screenshots/home.webp" />
 		</div>
 	</div>
 </section>
 
-{#snippet fauxScreen(title: string, subtitle: string)}
-	<div class="flex h-full flex-col items-center justify-center gap-2 p-6 text-center" style="background: linear-gradient(160deg, var(--m-surface-2), #0b0910);">
-		<div class="h-3 w-3 rounded-full" style="background: var(--m-violet)"></div>
-		<p class="font-display text-lg font-semibold" style="color: var(--m-text)">{title}</p>
-		<p class="text-[11px]" style="color: var(--m-text-muted)">{subtitle}</p>
-	</div>
-{/snippet}
-
-{#snippet approvalScreen()}
-	<div class="flex h-full flex-col p-4" style="background: linear-gradient(160deg, var(--m-surface-2), #0b0910);">
-		<div class="mt-6 rounded-2xl border p-4" style="border-color: var(--m-border-2); background: var(--m-surface);">
-			<div class="text-[9px] font-semibold uppercase tracking-wide" style="color: var(--m-text-dim)">Sign event from</div>
-			<div class="mt-1 font-mono text-xs font-semibold" style="color: var(--m-text)">jumble.social</div>
-			<hr class="my-3" style="border-color: var(--m-border)" />
-			<div class="text-[10px] leading-relaxed" style="color: var(--m-text-muted)">kind:1 note · signed locally on your device</div>
-			<div class="mt-4 flex flex-col gap-1.5">
-				<div class="rounded-xl py-2 text-center text-xs font-semibold" style="background: var(--m-violet); color: #fff">Sign</div>
-				<div class="rounded-xl border py-2 text-center text-xs font-semibold" style="border-color: var(--m-border-2); color: var(--m-text-muted)">Decline</div>
-			</div>
-		</div>
-	</div>
-{/snippet}

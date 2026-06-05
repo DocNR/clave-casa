@@ -37,7 +37,7 @@
 	</div>
 
 	<div use:reveal={{ delay: 120 }} class="flex justify-center {isEven ? '' : 'md:order-1'}">
-		<PhoneMockup tilt={tilt} glow={row.glow}>
+		<PhoneMockup tilt={tilt} glow={row.glow} src={row.screenshot}>
 			{#snippet screen()}
 				<div class="flex h-full flex-col items-center justify-center gap-3 p-6 text-center" style="background: linear-gradient(160deg, {theme.start}26, #0b0910);">
 					<div class="h-12 w-12 rounded-2xl" style="background: linear-gradient(135deg, {theme.start}, {theme.end})"></div>
