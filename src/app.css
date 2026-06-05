@@ -1,4 +1,7 @@
 @import 'tailwindcss';
+@import '@fontsource/space-grotesk/500.css';
+@import '@fontsource/space-grotesk/600.css';
+@import '@fontsource/space-grotesk/700.css';
 
 /* Force class-based dark mode. We never apply the .dark class anywhere,
    so all `dark:` Tailwind variants stay inactive even when the user's OS
@@ -25,6 +28,9 @@
 	/* Radii. Match iOS 16pt cards / 12pt inputs. */
 	--clave-radius-card: 16px;
 	--clave-radius-input: 12px;
+
+	/* Display font for marketing headlines — self-hosted, no off-domain. */
+	--font-display: 'Space Grotesk', var(--font-body, system-ui), sans-serif;
 }
 
 html {
@@ -67,4 +73,137 @@ h3 {
 	background: var(--clave-ambient, transparent);
 	transition: background 300ms ease;
 	z-index: 0;
+}
+
+/* ============================================================
+   Marketing landing (`/`) — dark theme + motion.
+   Everything here is scoped to `.marketing-root` so the light
+   app routes (/edit, /connect) are completely unaffected.
+   ============================================================ */
+.marketing-root {
+	color-scheme: dark;
+
+	--m-bg: #0e0b16;
+	--m-surface: #181327;
+	--m-surface-2: #211a36;
+	--m-border: #2a2142;
+	--m-border-2: #3a2f59;
+	--m-text: #f4f1fb;
+	--m-text-muted: #a79fc2;
+	/* Dimmest tier — lightened from #6f6789 to clear WCAG AA (4.5:1) on
+	   --m-bg, since it carries small meaningful text (footer links, chips). */
+	--m-text-dim: #8d86a8;
+
+	/* Hero/brand accent — Clave Violet (PALETTE[0]). */
+	--m-violet: #a14aff;
+	--m-violet-soft: #7a8cff;
+	--m-sky: #4ae8ff;
+	--m-teal: #2effb5;
+
+	min-height: 100vh;
+	background: var(--m-bg);
+	color: var(--m-text);
+	font-family:
+		-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+}
+
+.marketing-root .font-display {
+	font-family: var(--font-display);
+	letter-spacing: -0.02em;
+}
+
+/* Gradient headline — violet → sky → teal (Clave hues). */
+.marketing-root .gradient-text {
+	background: linear-gradient(120deg, var(--m-violet-soft) 0%, var(--m-violet) 45%, var(--m-sky) 100%);
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+}
+
+/* Glass nav panel once scrolled. */
+.marketing-glass {
+	background: rgba(14, 11, 22, 0.72);
+	backdrop-filter: blur(20px) saturate(140%);
+	-webkit-backdrop-filter: blur(20px) saturate(140%);
+}
+
+/* Reveal-on-scroll: hidden until the `reveal` action adds .is-visible. */
+.marketing-root .reveal {
+	opacity: 0;
+	transform: translateY(20px);
+	transition:
+		opacity 700ms ease-out,
+		transform 700ms ease-out;
+}
+.marketing-root .reveal.is-visible {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+/* Soft drifting ambient spotlights behind the hero. */
+.marketing-root .spotlight {
+	border-radius: 9999px;
+	filter: blur(8px);
+	pointer-events: none;
+}
+.marketing-root .spotlight-violet {
+	background: radial-gradient(closest-side, rgba(161, 74, 255, 0.22), transparent 70%);
+}
+.marketing-root .spotlight-sky {
+	background: radial-gradient(closest-side, rgba(74, 232, 255, 0.16), transparent 70%);
+}
+.marketing-root .spotlight-teal {
+	background: radial-gradient(closest-side, rgba(46, 255, 181, 0.14), transparent 70%);
+}
+
+/* Card hover lift. */
+.marketing-root .tilt-card {
+	transition:
+		transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1),
+		box-shadow 320ms ease;
+}
+.marketing-root .tilt-card:hover {
+	transform: translateY(-4px);
+	box-shadow: 0 24px 60px -24px rgba(161, 74, 255, 0.3);
+}
+
+@keyframes m-phone-hover {
+	0%,
+	100% {
+		transform: translateY(0) rotate(var(--phone-tilt, 0deg));
+	}
+	50% {
+		transform: translateY(-10px) rotate(calc(var(--phone-tilt, 0deg) - 0.5deg));
+	}
+}
+@keyframes m-blob-drift {
+	0%,
+	100% {
+		transform: translate(0, 0) scale(1);
+	}
+	33% {
+		transform: translate(30px, -20px) scale(1.05);
+	}
+	66% {
+		transform: translate(-20px, 25px) scale(0.97);
+	}
+}
+
+.marketing-root .animate-phone-hover {
+	animation: m-phone-hover 7s ease-in-out infinite;
+}
+.marketing-root .animate-blob-drift {
+	animation: m-blob-drift 18s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.marketing-root .animate-phone-hover,
+	.marketing-root .animate-blob-drift {
+		animation: none !important;
+	}
+	.marketing-root .reveal {
+		opacity: 1;
+		transform: none;
+		transition: none;
+	}
 }

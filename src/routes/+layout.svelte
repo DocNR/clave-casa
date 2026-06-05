@@ -13,6 +13,7 @@
 
 	let { children } = $props();
 	let activePubkey = $state<string | undefined>(undefined);
+	const isMarketing = $derived(page.url.pathname === '/');
 
 	onMount(() => {
 		const refresh = () => (activePubkey = getActivePubkey());
@@ -75,20 +76,27 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-<div class="relative min-h-screen bg-neutral-50 text-neutral-900">
-	<!-- Ambient gradient overlay (per-active-account). Sits above the
-	     wrapper's solid neutral-50 base and below the sticky header + main
-	     content. Switches via $effect on activePubkey. -->
-	<div class="clave-ambient-layer" aria-hidden="true"></div>
-	<header
-		class="sticky top-0 z-20 border-b border-[var(--clave-border)] bg-[var(--clave-surface)] backdrop-blur-xl"
-	>
-		<div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
-			<a href="/" class="text-base font-semibold tracking-tight">clave.casa</a>
-			<AccountSwitcher />
-		</div>
-	</header>
-	<main class="relative z-10 mx-auto max-w-3xl px-4 py-6">
+{#if isMarketing}
+	<!-- Marketing landing owns its own full-bleed dark chrome. The page
+	     wraps itself in .marketing-root (see src/app.css) and renders its
+	     own nav + footer. No shared light header, no max-w-3xl. -->
+	<div class="marketing-root">
 		{@render children?.()}
-	</main>
-</div>
+	</div>
+{:else}
+	<div class="relative min-h-screen bg-neutral-50 text-neutral-900">
+		<!-- Ambient gradient overlay (per-active-account). -->
+		<div class="clave-ambient-layer" aria-hidden="true"></div>
+		<header
+			class="sticky top-0 z-20 border-b border-[var(--clave-border)] bg-[var(--clave-surface)] backdrop-blur-xl"
+		>
+			<div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
+				<a href="/" class="text-base font-semibold tracking-tight">clave.casa</a>
+				<AccountSwitcher />
+			</div>
+		</header>
+		<main class="relative z-10 mx-auto max-w-3xl px-4 py-6">
+			{@render children?.()}
+		</main>
+	</div>
+{/if}
