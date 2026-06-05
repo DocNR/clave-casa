@@ -121,8 +121,8 @@ export const FEATURE_ROWS: readonly FeatureRowContent[] = [
 	{
 		eyebrow: 'Home Screen apps',
 		title: 'Use Nostr web apps the way they’re meant to be',
-		body: 'Because Clave signs remotely over NIP-46, you can add a Nostr web app to your Home Screen and launch it like a native app. Browser extensions (NIP-07) can’t do this — they rely on window.nostr, which a standalone PWA never sees.',
-		bullets: ['Launch web clients from your Home Screen', 'Full-screen and native-like, no browser chrome', 'No window.nostr or extension required'],
+		body: 'Because Clave signs remotely, you can add a Nostr web app to your Home Screen and open it like a real app — full-screen, no browser bar — and it can still sign. Browser-extension signers can’t do that on iPhone.',
+		bullets: ['Launch web clients from your Home Screen', 'Full-screen and native-like, no browser chrome', 'No browser extension needed'],
 		accent: 2,
 		glow: 'sky'
 	},
