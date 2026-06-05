@@ -87,10 +87,10 @@ export interface FeatureRowContent {
 
 export const FEATURE_ROWS: readonly FeatureRowContent[] = [
 	{
-		eyebrow: 'Secure Enclave',
+		eyebrow: 'On-device keys',
 		title: 'Your nsec never leaves your phone',
-		body: 'Your private key is generated and stored in the iOS Secure Enclave. Every signature is produced locally on your device — clave.casa, relays, and the apps you use never see it.',
-		bullets: ['Hardware-backed key storage', 'No key export unless you want it', 'Nothing to leak server-side'],
+		body: 'Your private key is generated on your iPhone and kept in the iOS Keychain — device-only, so it never syncs to iCloud or lands in a backup. Every signature is produced locally; clave.casa, relays, and the apps you use never see it.',
+		bullets: ['Stored in the iOS Keychain', 'Device-only — never synced or backed up', 'No key export unless you want it'],
 		accent: 0,
 		glow: 'violet'
 	},

@@ -2,7 +2,7 @@
 	import { reveal } from '$lib/actions/reveal';
 
 	const points = [
-		{ title: 'Your nsec never leaves your signer.', body: 'In Clave it lives in the iOS Secure Enclave. Signatures happen on your device.' },
+		{ title: 'Your nsec never leaves your device.', body: 'In Clave it lives in the iOS Keychain — device-only, never synced to iCloud or backed up. Signing happens on your phone.' },
 		{ title: 'No analytics, no telemetry, no trackers.', body: 'No third-party scripts, no off-domain fonts or icons. This page is a static bundle.' },
 		{ title: 'Live data comes straight from relays.', body: 'The notes shown here load directly from public Nostr relays in your browser — no intermediary.' },
 		{ title: 'Open source.', body: 'Clave iOS and clave.casa are both MIT-licensed. Read the code, file issues, send patches.' }

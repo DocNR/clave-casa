@@ -39,8 +39,8 @@
 				class="mx-auto mb-9 max-w-xl text-lg leading-relaxed lg:mx-0"
 				style="color: var(--m-text-muted)"
 			>
-				Clave is a remote Nostr signer. Your private key is generated and stored in the iOS
-				Secure Enclave — and never leaves it.
+				Clave is a remote Nostr signer. Your private key is generated on your iPhone and kept
+				in the iOS Keychain — device-only, and it never leaves your phone.
 			</p>
 
 			<div use:reveal={{ delay: 240 }} class="mb-10 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
