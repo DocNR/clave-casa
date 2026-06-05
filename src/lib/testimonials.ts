@@ -1,27 +1,21 @@
 // Curated, verifiable testimonials about Clave. Each entry is a real
-// kind:1 note id; the page fetches the live event + author profile and
-// links to njump so visitors can verify it. Ships empty — backfill ids
-// once sourced (via nak) and approved.
+// kind:1 note id; the page renders a build-time snapshot instantly, then
+// live-refreshes the event + author profile and links to njump so visitors
+// can verify it.
+//
+// Curated ids live in ./testimonial-ids.js (single source of truth, shared
+// with the snapshot generator). The baked snapshot is testimonials.data.json
+// — regenerate via `npm run snapshot:testimonials` after editing the ids.
 
 import type { Event } from 'nostr-tools/core';
 import type { Filter } from 'nostr-tools/filter';
 import { neventEncode } from 'nostr-tools/nip19';
 import { getPool } from './signer';
 import { SCAN_SET } from './relays';
+import { TESTIMONIAL_EVENT_IDS } from './testimonial-ids.js';
+import snapshot from './testimonials.data.json';
 
-// Hand-picked event ids (hex) of real notes about Clave, in display order.
-// Sourced from the #clave hashtag, curated to genuine user compliments and
-// verified live on relays (2026-06-05). The Clave team's own note is featured
-// separately (see FEATURED_NOTE in marketing.ts), so this list is user voices
-// only. Add more as organic praise grows.
-export const TESTIMONIAL_EVENT_IDS: readonly string[] = [
-	// t0ken7 — "Running #Clave remote iOS signer flawlessly across eight clients!"
-	'b2b8eb67582aca68aa97851018b616d7fe62d9699e49a420683cf694e940deb3',
-	// Bfgreen — "Nice, signing web clients using #clave on iOS."
-	'9bf0eed4561ead5eaad694d6434cb3524258111c0989edcfd868aecaeb27f992',
-	// djmeistro — "Been using #clave with my iOS device and it's really good!"
-	'864c4faf144c3b37d8abe6120e206fa55788f75b8943ae3e16c7b8c17aad138a'
-];
+export { TESTIMONIAL_EVENT_IDS };
 
 export interface Testimonial {
 	eventId: string;
@@ -31,6 +25,10 @@ export interface Testimonial {
 	content: string;
 	nevent: string;
 }
+
+// Build-time snapshot — rendered instantly on first paint, then replaced by
+// fetchTestimonials() once the live refresh resolves.
+export const TESTIMONIALS_SNAPSHOT: Testimonial[] = snapshot as Testimonial[];
 
 export function cleanContent(content: string): string {
 	return content
