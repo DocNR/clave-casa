@@ -31,8 +31,8 @@
 				class="font-display mb-6 text-[clamp(2.5rem,7vw,5rem)] font-bold leading-[0.98]"
 				style="color: var(--m-text)"
 			>
-				Approve every Nostr<br />signature from your
-				<span class="gradient-text">iPhone</span>.
+				Sign every Nostr event<br />without exposing your
+				<span class="gradient-text">keys</span>.
 			</h1>
 			<p
 				use:reveal={{ delay: 150 }}

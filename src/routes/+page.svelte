@@ -47,7 +47,7 @@
 	<title>Clave — A NIP-46 remote signer for iPhone</title>
 	<meta
 		name="description"
-		content="Approve every Nostr signature from your iPhone. Your nsec stays in the Secure Enclave."
+		content="Sign every Nostr event without exposing your keys. Your nsec is generated and stays in the iOS Secure Enclave."
 	/>
 </svelte:head>
 
