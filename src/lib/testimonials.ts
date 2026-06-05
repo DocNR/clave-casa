@@ -10,11 +10,11 @@ import { getPool } from './signer';
 import { SCAN_SET } from './relays';
 
 // Hand-picked event ids (hex) of real notes about Clave, in display order.
-// Sourced from the #clave hashtag, curated to genuine compliments and
-// verified live on relays (2026-06-05). Add more as organic praise grows.
+// Sourced from the #clave hashtag, curated to genuine user compliments and
+// verified live on relays (2026-06-05). The Clave team's own note is featured
+// separately (see FEATURED_NOTE in marketing.ts), so this list is user voices
+// only. Add more as organic praise grows.
 export const TESTIMONIAL_EVENT_IDS: readonly string[] = [
-	// Clave — "Hello Nostr. The keys stayed home today." (featured first)
-	'ef1342287730ef027b72a45177efa60144915697499e9a3509251860e0dbc85c',
 	// t0ken7 — "Running #Clave remote iOS signer flawlessly across eight clients!"
 	'b2b8eb67582aca68aa97851018b616d7fe62d9699e49a420683cf694e940deb3',
 	// Bfgreen — "Nice, signing web clients using #clave on iOS."

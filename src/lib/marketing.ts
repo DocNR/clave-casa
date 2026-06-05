@@ -37,6 +37,20 @@ export const CREDIT_PUBKEY_HEX =
 	'3129509e23d3a6125e1451a5912dbe01099e151726c4766b44e1ecb8c846f506';
 export const CREDIT_NJUMP_URL = `https://njump.me/npub1xy54p83r6wnpyhs52xjeztd7qyyeu9ghymz8v66yu8kt3jzx75rqhf3urc`;
 
+// Featured Clave-team note, shown as a standalone statement right after the
+// hero (component: FeaturedNote.svelte). It's a real, verifiable Nostr note —
+// the `verifyUrl` links to the original so visitors can confirm it. Rendered
+// statically (no relay dependency) so this key moment always shows instantly;
+// the link keeps it honest. `lead` + `emphasis` compose the full note text
+// minus the trailing #clave hashtag; `emphasis` gets the gradient treatment.
+export const FEATURED_NOTE = {
+	lead: 'Hello Nostr.',
+	emphasis: 'The keys stayed home today.',
+	author: 'Clave',
+	verifyUrl:
+		'https://njump.me/nevent1qqsw7y6z9pmnpmcz0de2g5tha7nqz3y326t5n856x5yj2xrqurdushqd5vp45'
+} as const;
+
 /**
  * Apply Violet brand theme to :root for the marketing route.
  * Called from +layout.svelte when no account is active and we're on `/`.

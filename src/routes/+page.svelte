@@ -14,6 +14,7 @@
 
 	import MarketingNav from '$lib/components/marketing/MarketingNav.svelte';
 	import HeroSection from '$lib/components/marketing/HeroSection.svelte';
+	import FeaturedNote from '$lib/components/marketing/FeaturedNote.svelte';
 	import FeaturesSection from '$lib/components/marketing/FeaturesSection.svelte';
 	import HowItWorks from '$lib/components/marketing/HowItWorks.svelte';
 	import Testimonials from '$lib/components/marketing/Testimonials.svelte';
@@ -53,6 +54,7 @@
 <MarketingNav />
 <main>
 	<HeroSection />
+	<FeaturedNote />
 	<HowItWorks />
 	<FeaturesSection />
 	<Testimonials />
