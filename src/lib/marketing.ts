@@ -134,7 +134,8 @@ export const FEATURE_ROWS: readonly FeatureRowContent[] = [
 		body: 'Because Clave signs remotely, you can add a Nostr web app to your Home Screen and open it like a real app — full-screen, no browser bar — and it can still sign. Browser-extension signers can’t do that on iPhone.',
 		bullets: ['Launch web clients from your Home Screen', 'Full-screen and native-like, no browser chrome', 'No browser extension needed'],
 		accent: 2,
-		glow: 'sky'
+		glow: 'sky',
+		screenshot: '/screenshots/home-screen.webp'
 	},
 	{
 		eyebrow: 'Open or closed',

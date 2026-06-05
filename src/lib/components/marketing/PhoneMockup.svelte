@@ -51,9 +51,9 @@
 			style="background: #0b0910;"
 		></div>
 
-		<div class="relative aspect-[10/20.5] w-full overflow-hidden rounded-[1.85rem]">
+		<div class="relative aspect-[923/2000] w-full overflow-hidden rounded-[1.85rem]">
 			{#if src}
-				<img {src} {alt} class="h-full w-full object-cover" loading="lazy" />
+				<img {src} {alt} class="h-full w-full object-cover object-top" loading="lazy" />
 			{:else if screen}
 				{@render screen()}
 			{/if}
