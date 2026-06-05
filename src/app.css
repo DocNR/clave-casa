@@ -90,7 +90,9 @@ h3 {
 	--m-border-2: #3a2f59;
 	--m-text: #f4f1fb;
 	--m-text-muted: #a79fc2;
-	--m-text-dim: #6f6789;
+	/* Dimmest tier — lightened from #6f6789 to clear WCAG AA (4.5:1) on
+	   --m-bg, since it carries small meaningful text (footer links, chips). */
+	--m-text-dim: #8d86a8;
 
 	/* Hero/brand accent — Clave Violet (PALETTE[0]). */
 	--m-violet: #a14aff;
@@ -119,7 +121,6 @@ h3 {
 }
 
 /* Glass nav panel once scrolled. */
-.marketing-root .glass-panel,
 .marketing-glass {
 	background: rgba(14, 11, 22, 0.72);
 	backdrop-filter: blur(20px) saturate(140%);
@@ -187,15 +188,6 @@ h3 {
 		transform: translate(-20px, 25px) scale(0.97);
 	}
 }
-@keyframes m-pulse-dot {
-	0%,
-	100% {
-		opacity: 1;
-	}
-	50% {
-		opacity: 0.4;
-	}
-}
 
 .marketing-root .animate-phone-hover {
 	animation: m-phone-hover 7s ease-in-out infinite;
@@ -203,14 +195,10 @@ h3 {
 .marketing-root .animate-blob-drift {
 	animation: m-blob-drift 18s ease-in-out infinite;
 }
-.marketing-root .animate-pulse-dot {
-	animation: m-pulse-dot 2s ease-in-out infinite;
-}
 
 @media (prefers-reduced-motion: reduce) {
 	.marketing-root .animate-phone-hover,
-	.marketing-root .animate-blob-drift,
-	.marketing-root .animate-pulse-dot {
+	.marketing-root .animate-blob-drift {
 		animation: none !important;
 	}
 	.marketing-root .reveal {
