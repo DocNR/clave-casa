@@ -1,0 +1,26 @@
+[
+	{
+		"eventId": "b2b8eb67582aca68aa97851018b616d7fe62d9699e49a420683cf694e940deb3",
+		"pubkey": "5bed99fad2decf98d499517f92167631ce42fcde7a06789ab87a7ca6cc4ddd14",
+		"displayName": "t0ken7",
+		"picture": "https://blossom.primal.net/ce7f328051fb1e3c5c2b66a5996b3436051fe6f4daed74e236434cfe80b786c1.jpg",
+		"content": "GM Nostr! Running #Clave remote iOS signer flawlessly across eight clients! Heck yeah! #hacktheplanet",
+		"nevent": "nevent1qgs9hmveltfdanuc6jv4zlujzemrrnjzln085pncn2u85l9xe3xa69qqyzet36m8tq4v5692j7z3qx9kzmtluckedx0ynfpqdq70d98fgr0txrzlhf5"
+	},
+	{
+		"eventId": "9bf0eed4561ead5eaad694d6434cb3524258111c0989edcfd868aecaeb27f992",
+		"pubkey": "0c9e5e17fbdf555ef41daf3c3a196749c848f9c791966f30fae5e4c0480e870b",
+		"displayName": "Bfgreen",
+		"picture": "https://blossom.primal.net/c6994e0bb31a9eb36d7eed55e8c9fdfad63533737bb86af60cdf45f9dddb99c8.png",
+		"content": "Nice, signing web clients using #clave on iOS.",
+		"nevent": "nevent1qgsqe8j7zlaa74277sw670p6r9n5njzgl8rer9n0xrawtexqfq8gwzcqyzdlpmk52c026h42662dvs6vkdfyykq3rsycnmw0mp52ajhtylueypu5hum"
+	},
+	{
+		"eventId": "864c4faf144c3b37d8abe6120e206fa55788f75b8943ae3e16c7b8c17aad138a",
+		"pubkey": "1e067bfb58820576df3daf7cb051d4411b80a0b8fa12fc253cd0ab41cf1a2069",
+		"displayName": "djmeistro✝️ 🍊💊⚡️",
+		"picture": "https://image.nostr.build/d4eb84acc40f8e16582193c6a1bb0b95b37b755bc09e3d921a3e1c125e6952de.gif",
+		"content": "Been using #clave with my iOS device and it's really good! iOS users should check it out if they're looking for mobile remote signer!",
+		"nevent": "nevent1qgspupnmldvgyptkmu767l9s282yzxuq5zu05yhuy57dp26peudzq6gqyzrycna0z3xrkd7c40npyr3qd7j40z8htwy58t37zmrm3st645fc5y9k04t"
+	}
+]
