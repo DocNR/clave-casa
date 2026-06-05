@@ -1,5 +1,15 @@
 # clave.casa Landing Redesign Implementation Plan
 
+> [!WARNING]
+> **Outdated security claim — corrected 2026-06-05.** Code samples and copy in
+> this historical plan describe the nsec as living in the iOS **Secure Enclave**
+> (and as "hardware-backed"). That is **inaccurate**: per the Clave iOS source
+> (`SharedKeychain.swift`), the nsec is stored as a plain iOS **Keychain** item
+> with `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` — no Secure Enclave,
+> no hardware-backed key, no biometric/SE gating at rest. The live site copy now
+> says "iOS Keychain, device-only, never synced or backed up." Doc left as-is for
+> historical record.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Rebuild the clave.casa marketing landing (`/`) as a dark, motion-rich, signer-first page in the spirit of wisp.mobile, using Clave's violet identity and existing gradient palette — without touching `/edit` or `/connect`.

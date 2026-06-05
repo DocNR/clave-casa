@@ -2,6 +2,16 @@
 
 _2026-05-02 · status: approved-pending-implementation_
 
+> [!WARNING]
+> **Outdated security claim — corrected 2026-06-05.** Copy in this historical
+> doc describes the nsec as living in the iOS **Secure Enclave** (and as
+> "hardware-backed"). That is **inaccurate**: per the Clave iOS source
+> (`SharedKeychain.swift`), the nsec is stored as a plain iOS **Keychain** item
+> with `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` — no Secure Enclave,
+> no hardware-backed key, no biometric/SE gating at rest. The live site copy now
+> says "iOS Keychain, device-only, never synced or backed up." Doc left as-is for
+> historical record.
+
 ## Context
 
 clave.casa's `/` route currently renders a one-paragraph placeholder with a single "Connect" CTA. With the design system unification done (`docs/design-system.md`) and the web companion at MVP, the apex is overdue for a real landing page.

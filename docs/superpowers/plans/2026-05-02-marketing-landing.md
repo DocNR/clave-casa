@@ -1,5 +1,15 @@
 # Marketing Landing Page Implementation Plan
 
+> [!WARNING]
+> **Outdated security claim — corrected 2026-06-05.** Code samples and copy in
+> this historical plan describe the nsec as living in the iOS **Secure Enclave**.
+> That is **inaccurate**: per the Clave iOS source (`SharedKeychain.swift`), the
+> nsec is stored as a plain iOS **Keychain** item with
+> `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` — no Secure Enclave, no
+> hardware-backed key, no biometric/SE gating at rest. The live site copy now
+> says "iOS Keychain, device-only, never synced or backed up." Doc left as-is for
+> historical record.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the minimal `/` route with a Clave-iOS-led marketing landing page that exercises the design system end-to-end, preserves the auto-redirect for signed-in users, and ships with zero analytics or third-party assets.

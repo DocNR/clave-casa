@@ -2,6 +2,16 @@
 
 _Date: 2026-06-05_
 
+> [!WARNING]
+> **Outdated security claim — corrected 2026-06-05.** Copy in this historical
+> doc describes the nsec as living in / never leaving the iOS **Secure Enclave**.
+> That is **inaccurate**: per the Clave iOS source (`SharedKeychain.swift`), the
+> nsec is stored as a plain iOS **Keychain** item with
+> `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` — no Secure Enclave, no
+> hardware-backed key, no biometric/SE gating at rest. The live site copy now
+> says "iOS Keychain, device-only, never synced or backed up." Doc left as-is for
+> historical record.
+
 ## Summary
 
 Redesign the clave.casa marketing landing page (`/`) from its current
