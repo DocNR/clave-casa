@@ -43,38 +43,6 @@
 	});
 </script>
 
-<svelte:head>
-	<title>Clave — A NIP-46 remote signer for iPhone</title>
-	<meta
-		name="description"
-		content="Sign every Nostr event without exposing your keys. Your nsec stays on your iPhone in the iOS Keychain — device-only, never synced or backed up."
-	/>
-	<link rel="canonical" href="https://clave.casa/" />
-
-	<!-- Open Graph (rich link previews) -->
-	<meta property="og:type" content="website" />
-	<meta property="og:site_name" content="Clave" />
-	<meta property="og:url" content="https://clave.casa/" />
-	<meta property="og:title" content="Clave — Nostr remote signer for iOS" />
-	<meta
-		property="og:description"
-		content="Sign every Nostr event without exposing your keys. Your nsec stays on your iPhone in the iOS Keychain — device-only, never synced or backed up."
-	/>
-	<meta property="og:image" content="https://clave.casa/og-image.png" />
-	<meta property="og:image:width" content="1200" />
-	<meta property="og:image:height" content="630" />
-	<meta property="og:image:alt" content="Clave — a NIP-46 Nostr remote signer for iOS" />
-
-	<!-- Twitter / X card -->
-	<meta name="twitter:card" content="summary_large_image" />
-	<meta name="twitter:title" content="Clave — Nostr remote signer for iOS" />
-	<meta
-		name="twitter:description"
-		content="Sign every Nostr event without exposing your keys. Your nsec stays on your iPhone in the iOS Keychain — device-only, never synced or backed up."
-	/>
-	<meta name="twitter:image" content="https://clave.casa/og-image.png" />
-</svelte:head>
-
 <MarketingNav />
 <main>
 	<HeroSection />

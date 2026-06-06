@@ -4,6 +4,42 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="text-scale" content="scale" />
+		<link rel="icon" href="/clave-icon.png" />
+
+		<!-- SEO + rich link previews. Kept in the static shell (not in
+		     <svelte:head>) because the app runs client-only (ssr=false,
+		     SPA fallback), so component <head> tags are JS-injected and never
+		     seen by link-preview scrapers. These static tags are. -->
+		<title>Clave — A NIP-46 remote signer for iPhone</title>
+		<meta
+			name="description"
+			content="Sign every Nostr event without exposing your keys. Your nsec stays on your iPhone in the iOS Keychain — device-only, never synced or backed up."
+		/>
+		<link rel="canonical" href="https://clave.casa/" />
+
+		<!-- Open Graph -->
+		<meta property="og:type" content="website" />
+		<meta property="og:site_name" content="Clave" />
+		<meta property="og:url" content="https://clave.casa/" />
+		<meta property="og:title" content="Clave — Nostr remote signer for iOS" />
+		<meta
+			property="og:description"
+			content="Sign every Nostr event without exposing your keys. Your nsec stays on your iPhone in the iOS Keychain — device-only, never synced or backed up."
+		/>
+		<meta property="og:image" content="https://clave.casa/og-image.png" />
+		<meta property="og:image:width" content="1200" />
+		<meta property="og:image:height" content="630" />
+		<meta property="og:image:alt" content="Clave — a NIP-46 Nostr remote signer for iOS" />
+
+		<!-- Twitter / X -->
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content="Clave — Nostr remote signer for iOS" />
+		<meta
+			name="twitter:description"
+			content="Sign every Nostr event without exposing your keys. Your nsec stays on your iPhone in the iOS Keychain — device-only, never synced or backed up."
+		/>
+		<meta name="twitter:image" content="https://clave.casa/og-image.png" />
+
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

@@ -79,36 +79,10 @@
 	});
 </script>
 
-<svelte:head>
-	<link rel="icon" href="/clave-icon.png" />
-	{#if !isMarketing}
-		<!-- Generic fallback preview for app routes (/edit, /connect). The
-		     marketing homepage (+page.svelte) sets its own, more specific tags. -->
-		<title>Clave — A NIP-46 remote signer for iPhone</title>
-		<meta
-			name="description"
-			content="Sign every Nostr event without exposing your keys. Clave is a NIP-46 remote signer for iPhone."
-		/>
-		<meta property="og:type" content="website" />
-		<meta property="og:site_name" content="Clave" />
-		<meta property="og:title" content="Clave — Nostr remote signer for iOS" />
-		<meta
-			property="og:description"
-			content="Sign every Nostr event without exposing your keys. Clave is a NIP-46 remote signer for iPhone."
-		/>
-		<meta property="og:image" content="https://clave.casa/og-image.png" />
-		<meta property="og:image:width" content="1200" />
-		<meta property="og:image:height" content="630" />
-		<meta property="og:image:alt" content="Clave — a NIP-46 Nostr remote signer for iOS" />
-		<meta name="twitter:card" content="summary_large_image" />
-		<meta name="twitter:title" content="Clave — Nostr remote signer for iOS" />
-		<meta
-			name="twitter:description"
-			content="Sign every Nostr event without exposing your keys. Clave is a NIP-46 remote signer for iPhone."
-		/>
-		<meta name="twitter:image" content="https://clave.casa/og-image.png" />
-	{/if}
-</svelte:head>
+<!-- All <head> SEO/OG/Twitter/favicon tags live in src/app.html (the static
+     shell), since this app is client-only (ssr=false) and JS-injected head
+     tags aren't seen by link-preview scrapers. -->
+
 
 {#if isMarketing}
 	<!-- Marketing landing owns its own full-bleed dark chrome. The page
