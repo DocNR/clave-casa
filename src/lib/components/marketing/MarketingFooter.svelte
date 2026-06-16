@@ -20,6 +20,7 @@
 			</div>
 		</div>
 		<div class="flex flex-wrap gap-x-4 gap-y-1">
+			<a class="hover:underline" href="/privacy">Privacy</a>
 			<a class="hover:underline" href={CLAVE_CASA_REPO_URL} target="_blank" rel="noopener noreferrer">clave.casa</a>
 			<a class="hover:underline" href={CLAVE_REPO_URL} target="_blank" rel="noopener noreferrer">Clave iOS</a>
 			<a class="hover:underline" href={NIP46_SPEC_URL} target="_blank" rel="noopener noreferrer">NIP-46 spec</a>

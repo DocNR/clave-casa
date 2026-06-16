@@ -12,9 +12,13 @@
 
 	let { children } = $props();
 	let activePubkey = $state<string | undefined>(undefined);
-	const isMarketing = $derived(page.url.pathname === '/');
+	// Routes that use the dark, full-bleed marketing chrome (own nav + footer,
+	// no shared light header). The landing and the privacy policy both live
+	// here so /privacy reads as part of the site, not a bolt-on.
+	const MARKETING_ROUTES = ['/', '/privacy'];
+	const isMarketing = $derived(MARKETING_ROUTES.includes(page.url.pathname));
 
-	// Paint the document canvas dark on the marketing route so overscroll
+	// Paint the document canvas dark on the marketing routes so overscroll
 	// (rubber-banding past the top/bottom) shows the page's dark bg, not white.
 	// Other routes keep the default light canvas.
 	$effect(() => {
@@ -85,9 +89,9 @@
 
 
 {#if isMarketing}
-	<!-- Marketing landing owns its own full-bleed dark chrome. The page
-	     wraps itself in .marketing-root (see src/app.css) and renders its
-	     own nav + footer. No shared light header, no max-w-3xl. -->
+	<!-- Marketing routes (landing, /privacy) own their full-bleed dark chrome.
+	     The page wraps itself in .marketing-root (see src/app.css) and renders
+	     its own nav + footer. No shared light header, no max-w-3xl. -->
 	<div class="marketing-root">
 		{@render children?.()}
 	</div>
