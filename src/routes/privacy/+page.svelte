@@ -139,6 +139,12 @@
 				roughly when. What they cannot do: read the contents of your requests, or sign anything on
 				your behalf — they never hold your key.
 			</p>
+			<p>
+				You don’t have to use our proxy at all. Advanced users can point Clave at a self-hosted
+				proxy under Settings → Push Proxy, in which case your push token and public key are sent to
+				that server instead of ours. The proxy is part of the same open-source project, so you’re
+				free to run the entire push stack yourself.
+			</p>
 
 			<h2>Apple Push Notification service</h2>
 			<p>
@@ -149,7 +155,8 @@
 			<h2>Data sharing</h2>
 			<p>
 				We do not sell, rent, or share your data. Clave has no advertising and no third-party
-				analytics. The only server involved is the project’s own push proxy, described above.
+				analytics. The only server involved is the project’s own push proxy (or your own, if you
+				self-host it), described above.
 			</p>
 
 			<h2>Children</h2>
