@@ -28,6 +28,12 @@ export const AMBER_PLAY_STORE_URL =
 export const NSEC_APP_URL = 'https://nsec.app';
 export const CLAVE_REPO_URL = 'https://github.com/DocNR/clave';
 export const CLAVE_CASA_REPO_URL = 'https://github.com/DocNR/clave-casa';
+// Canonical, longer-form FAQ lives in the Clave iOS repo. The /faq page on this
+// site ports a curated subset and links out here for the full, always-current copy.
+export const CLAVE_FAQ_URL = `${CLAVE_REPO_URL}/blob/main/FAQ.md`;
+export const CLAVE_SECURITY_URL = `${CLAVE_REPO_URL}/blob/main/SECURITY.md`;
+export const CLAVE_NIP46_COMPAT_URL = `${CLAVE_REPO_URL}/blob/main/docs/nip46-compatibility.md`;
+export const CLAVE_ISSUES_URL = `${CLAVE_REPO_URL}/issues`;
 export const DESIGN_SYSTEM_URL =
 	'https://github.com/DocNR/clave-casa/blob/main/docs/design-system.md';
 export const NIP46_SPEC_URL = 'https://github.com/nostr-protocol/nips/blob/master/46.md';
