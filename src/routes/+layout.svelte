@@ -13,9 +13,9 @@
 	let { children } = $props();
 	let activePubkey = $state<string | undefined>(undefined);
 	// Routes that use the dark, full-bleed marketing chrome (own nav + footer,
-	// no shared light header). The landing and the privacy policy both live
-	// here so /privacy reads as part of the site, not a bolt-on.
-	const MARKETING_ROUTES = ['/', '/privacy'];
+	// no shared light header). The landing, privacy policy, and FAQ all live
+	// here so /privacy and /faq read as part of the site, not bolt-ons.
+	const MARKETING_ROUTES = ['/', '/privacy', '/faq'];
 	const isMarketing = $derived(MARKETING_ROUTES.includes(page.url.pathname));
 
 	// Paint the document canvas dark on the marketing routes so overscroll
