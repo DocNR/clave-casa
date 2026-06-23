@@ -24,5 +24,9 @@
 				</div>
 			{/each}
 		</div>
+		<p use:reveal class="mt-10 text-center text-sm" style="color: var(--m-text-muted)">
+			Still wondering if it’s safe to trust with your key?
+			<a class="underline underline-offset-2 hover:no-underline" href="/faq" style="color: var(--m-violet-soft)">Read the FAQ →</a>
+		</p>
 	</div>
 </section>
