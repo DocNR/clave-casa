@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { reveal } from '$lib/actions/reveal';
-	import { CLAVE_INSTALL_URL, CLAVE_INSTALL_LABEL } from '$lib/marketing';
+	import { CLAVE_INSTALL_URL, CLAVE_INSTALL_LABEL, TESTFLIGHT_URL } from '$lib/marketing';
 </script>
 
 <section class="relative overflow-hidden px-6 py-24">
@@ -9,7 +9,7 @@
 			Hold your own keys. <span class="gradient-text">Sign with a tap.</span>
 		</h2>
 		<p class="mx-auto mt-4 max-w-md text-[15px]" style="color: var(--m-text-muted)">
-			Clave is free while we are in beta. iOS 16 and up.
+			Free on the App Store. iOS 16 and up.
 		</p>
 		<div class="mt-8 flex justify-center">
 			<a href={CLAVE_INSTALL_URL} target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold transition-transform active:scale-95" style="background: linear-gradient(120deg, var(--m-violet-soft), var(--m-violet)); color: #fff;">
@@ -19,5 +19,11 @@
 				Download — {CLAVE_INSTALL_LABEL}
 			</a>
 		</div>
+		<!-- Regional fallback: the App Store listing isn't live everywhere yet
+		     (notably the EU) — TestFlight covers those visitors. -->
+		<p class="mt-4 text-xs" style="color: var(--m-text-dim)">
+			Not on the App Store in your country yet?
+			<a class="underline hover:no-underline" href={TESTFLIGHT_URL} target="_blank" rel="noopener noreferrer" style="color: var(--m-text-muted)">Join via TestFlight</a>.
+		</p>
 	</div>
 </section>

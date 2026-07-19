@@ -10,10 +10,15 @@ export const MARKETING_BRAND_INDEX = 0; // Violet
 export const MARKETING_BRAND_THEME = PALETTE[MARKETING_BRAND_INDEX];
 
 // External URLs.
+// TestFlight stays published even though Clave shipped to the App Store: the
+// 1.0 listing isn't live in every territory yet (notably the EU), so TestFlight
+// is the install path for visitors there. Note TestFlight builds expire 90 days
+// after upload — this link only works while beta builds keep shipping.
 export const TESTFLIGHT_URL = 'https://testflight.apple.com/join/5Mx5AZx7';
-// Set this when Clave ships to the App Store. While undefined, surfaces that
-// recommend installing Clave fall back to TESTFLIGHT_URL via CLAVE_INSTALL_URL.
-export const CLAVE_APP_STORE_URL: string | undefined = undefined;
+// Live since 2026-07. While undefined, surfaces that recommend installing
+// Clave fall back to TESTFLIGHT_URL via CLAVE_INSTALL_URL.
+export const CLAVE_APP_STORE_URL: string | undefined =
+	'https://apps.apple.com/us/app/clave-nostr-signer/id6762104155';
 // Use this anywhere we want "the recommended way to install Clave for end users".
 // Resolves to App Store if set, TestFlight otherwise.
 export const CLAVE_INSTALL_URL: string = CLAVE_APP_STORE_URL ?? TESTFLIGHT_URL;

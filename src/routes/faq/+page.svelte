@@ -23,9 +23,11 @@
 		CLAVE_SECURITY_URL,
 		CLAVE_NIP46_COMPAT_URL,
 		CLAVE_ISSUES_URL,
+		CLAVE_APP_STORE_URL,
 		CLAVE_INSTALL_URL,
 		CLAVE_INSTALL_LABEL,
-		NIP46_SPEC_URL
+		NIP46_SPEC_URL,
+		TESTFLIGHT_URL
 	} from '$lib/marketing';
 	import { reveal } from '$lib/actions/reveal';
 
@@ -136,7 +138,7 @@
 					id: 'main-key-or-throwaway',
 					q: 'Can I use my main key, or should I use a throwaway?',
 					body: [
-						'Use whichever you’re comfortable with. The honest way to think about it: trusting Clave with your key deserves the same consideration as any app you’d hand your nsec to — the difference is that Clave becomes the <strong>one</strong> place holding it, instead of every client you’ve ever pasted it into. It’s still in TestFlight beta and the independent audit is still ahead of us, so go in informed. If you’re cautious, starting with a secondary key is a perfectly reasonable way to try it.'
+						'Use whichever you’re comfortable with. The honest way to think about it: trusting Clave with your key deserves the same consideration as any app you’d hand your nsec to — the difference is that Clave becomes the <strong>one</strong> place holding it, instead of every client you’ve ever pasted it into. The independent audit is still ahead of us, so go in informed. If you’re cautious, starting with a secondary key is a perfectly reasonable way to try it.'
 					]
 				},
 				{
@@ -194,6 +196,13 @@
 					id: 'cost',
 					q: 'How much does it cost?',
 					body: ['Clave is free and open source (MIT licensed).']
+				},
+				{
+					id: 'availability',
+					q: 'Clave isn’t in the App Store in my country — now what?',
+					body: [
+						`Clave is live on the ${ext(CLAVE_APP_STORE_URL ?? CLAVE_INSTALL_URL, 'App Store')}, but not yet in every country — most notably not in the European Union, where listing an app involves extra steps we haven’t completed yet. If the listing doesn’t show up for you, you can install the same app through the ${ext(TESTFLIGHT_URL, 'TestFlight beta')} — it works everywhere TestFlight does. We’ll update this answer as availability expands.`
+					]
 				},
 				{
 					id: 'report-bug',

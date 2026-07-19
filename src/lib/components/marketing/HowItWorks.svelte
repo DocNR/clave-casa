@@ -2,7 +2,7 @@
 	import { reveal } from '$lib/actions/reveal';
 
 	const steps = [
-		{ n: 1, title: 'Install Clave on iPhone', body: 'iOS 16+, free via TestFlight while we are in beta.' },
+		{ n: 1, title: 'Install Clave on iPhone', body: 'iOS 16+, free on the App Store — or via TestFlight where the listing has not landed yet.' },
 		{ n: 2, title: 'Add your Nostr account', body: 'Paste an existing nsec or generate a fresh one. It is kept on your device in the iOS Keychain — never synced to the cloud.' },
 		{ n: 3, title: 'Sign on behalf of your clients', body: 'Connect a NIP-46 client with a QR code or bunker URI. When it needs a signature, Clave asks you — tap to approve.' }
 	];

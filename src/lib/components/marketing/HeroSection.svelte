@@ -2,7 +2,7 @@
 <script lang="ts">
 	import { reveal } from '$lib/actions/reveal';
 	import PhoneMockup from './PhoneMockup.svelte';
-	import { CLAVE_INSTALL_URL, CLAVE_INSTALL_LABEL } from '$lib/marketing';
+	import { CLAVE_INSTALL_URL, CLAVE_INSTALL_LABEL, TESTFLIGHT_URL } from '$lib/marketing';
 
 	const chips = [
 		{ label: 'nsec secured in Clave', color: 'var(--m-violet)' },
@@ -43,7 +43,7 @@
 				in the iOS Keychain — device-only, and it never leaves your phone.
 			</p>
 
-			<div use:reveal={{ delay: 240 }} class="mb-10 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
+			<div use:reveal={{ delay: 240 }} class="mb-4 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
 				<a
 					href={CLAVE_INSTALL_URL}
 					target="_blank"
@@ -65,6 +65,13 @@
 					See how it works
 				</button>
 			</div>
+
+			<!-- Clave isn't live in every App Store territory yet (notably the EU);
+			     TestFlight is the install path for visitors there. -->
+			<p use:reveal={{ delay: 300 }} class="mb-10 text-xs" style="color: var(--m-text-dim)">
+				Not on the App Store in your country yet?
+				<a class="underline hover:no-underline" href={TESTFLIGHT_URL} target="_blank" rel="noopener noreferrer" style="color: var(--m-text-muted)">Join via TestFlight</a>.
+			</p>
 
 			<div use:reveal={{ delay: 360 }} class="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs lg:justify-start" style="color: var(--m-text-dim)">
 				{#each chips as chip}
