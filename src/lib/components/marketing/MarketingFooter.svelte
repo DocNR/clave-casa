@@ -1,5 +1,6 @@
 <script lang="ts">
 	import {
+		CLAVE_APP_STORE_URL,
 		TESTFLIGHT_URL,
 		CLAVE_REPO_URL,
 		CLAVE_CASA_REPO_URL,
@@ -25,6 +26,7 @@
 			<a class="hover:underline" href={CLAVE_CASA_REPO_URL} target="_blank" rel="noopener noreferrer">clave.casa</a>
 			<a class="hover:underline" href={CLAVE_REPO_URL} target="_blank" rel="noopener noreferrer">Clave iOS</a>
 			<a class="hover:underline" href={NIP46_SPEC_URL} target="_blank" rel="noopener noreferrer">NIP-46 spec</a>
+			<a class="hover:underline" href={CLAVE_APP_STORE_URL} target="_blank" rel="noopener noreferrer">App Store</a>
 			<a class="hover:underline" href={TESTFLIGHT_URL} target="_blank" rel="noopener noreferrer">TestFlight</a>
 		</div>
 	</div>
