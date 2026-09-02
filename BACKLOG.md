@@ -6,9 +6,49 @@ Open work, ordered roughly by priority.
 
 - [x] **Deploy to clave.casa** — shipped 2026-05-03. Cloudflare Pages auto-deploys on every push to `main`. Custom domain `clave.casa` (apex) via CNAME-flattening to `clave-casa.pages.dev`. Build config: `npm run build` → `build/`, `NODE_VERSION=20` env var override. CF-free-tier suffices for the foreseeable future. AASA at `/.well-known/apple-app-site-association` validated via Apple CDN. Site live, all routes (`/`, `/connect`, `/edit`) responding 200, HTTPS auto-provisioned via CF Universal SSL. Web Analytics intentionally OFF (privacy promise).
 - [x] **Marketing landing page on clave.casa root** — shipped 2026-05-02. Clave-iOS-led, seven sections, real-component product mockup, no analytics. Spec at `docs/superpowers/specs/2026-05-02-marketing-landing-design.md`. Follow-ups under "Marketing landing follow-ups" below.
-- [ ] **Clave iOS new-account flow integration** — when a Clave user generates a fresh account, present an "Open profile editor" affordance that hands off to `clave.casa/connect#bunker=…`. Lands on `feat/multi-account` after that branch merges to `main`. Spec'd in `~/.claude/plans/are-there-any-nostr-gentle-ripple.md` (the original macro plan).
+- [ ] **Clave iOS new-account flow integration** — when a Clave user generates a fresh account, present an "Open profile editor" affordance that hands off to `clave.casa/connect#bunker=…`. Lands on `feat/multi-account` after that branch merges to `main`. Spec'd in `~/.claude/plans/are-there-any-nostr-gentle-ripple.md` (the original macro plan). **2026-09-02: absorbed into the Sign in with Clave spec** (see section below) — in the sign-in flow the *partner* publishes kind:0/10002 through the fresh session (generated-key branch only); this handoff remains the partner-independent fallback profile path.
 - [x] **`/edit#bunker=…` route** — shipped 2026-05-03 at `8878b4c`. Coordinates with iOS Edit-on-clave.casa row (shipped iOS-side at `c189162`/`d8feae1` in build 45). Algorithm exactly as specified: parse fragment → check existing pairing by `bp.pubkey` → switch-or-pair → scrub fragment via `history.replaceState`. Verified end-to-end on device with build 45+.
 - [x] **AASA at `/.well-known/apple-app-site-association`** — shipped 2026-05-03 at `306f63e` + `1d98425`. Two-component scoping (`/connect/?uri=*` + `/connect?uri=*`), `Content-Type: application/json` via `static/_headers`, app ID `944AF56S27.dev.nostr.Clave` (capital C — verified in Xcode pbxproj). Apple CDN-validated. Pairs with iOS Phase B (`1bac9a9`) — Universal Links route `nostrconnect://` deeplinks to Clave even when Primal is installed. **Note:** the original BACKLOG draft used lowercase `dev.nostr.clave` placeholder in the appIDs JSON; actual bundle ID is mixed-case. Critical: don't unify with the lowercase namespace identifiers (app group `group.dev.nostr.clave` and keychain `dev.nostr.clave.shared` predate the bundle-ID spec and are namespace-distinct).
+
+## Sign in with Clave (cross-repo initiative, spec'd 2026-09-02)
+
+Partner-requested (Conduit wants a signer in their merchant onboarding: install Clave from
+inside the partner app → create/import identity → return with a live NIP-46 session). Spec of
+record: `clave/docs/superpowers/specs/2026-09-02-sign-in-with-clave-design.md`. Handshake is
+the nostrconnect direction (partner-initiated; bunker stays manual-export/single-use by
+design); post-pairing both directions converge on the proxy/APNs/lock-screen-approve runtime.
+
+### Phase 1 — the Conduit unlock (weeks 1–2)
+
+- [ ] **iOS: DeeplinkRouter stash-and-replay** — `.stashForOnboarding` replaces the 0-account `.ignore` (`Shared/DeeplinkRouter.swift:56`); first `clave://connect?uri=` handler for the reserved scheme; stash persisted with TTL + `createdDuringFlow` flag, promoted into `pendingNostrconnectURI` when `currentAccount` lands so the existing HomeView → ApprovalSheet replay fires. Onboarding step-1 caller banner ("_Partner_ wants to connect — create or import your key to continue"). NOTE: onboarding step 2 is unreachable dead code — don't build on it.
+- [ ] **iOS: ApprovalSheet domain-first rendering** — registrable domain largest, self-asserted name/icon marked unverified, client-pubkey fingerprint.
+- [ ] **web: /connect fallback hardening** — sessionStorage stash of inbound URI (documented tab-scoped relaxation of memory-only; device-local, consistent with zero-analytics), caller-name display, persistent "Installed? Open Clave" `clave://connect?uri=` button (same-domain Universal Links don't fire; JS can't re-fire one), Smart App Banner meta with `app-argument` templated before parse (post-install OPEN affordance only), platform-aware install panel.
+- [ ] **web: `static/sdk/clave-connect.js` v0 + npm mirror** — extracted from POWR's vendored ~300-line NIP-46 client (rust-nostr ≤0.44.2 chokes on the echoed-secret ack); versioned immutable paths via `_headers`, published SRI hashes, connect origin hardcoded to clave.casa. SDK contract: persist client keypair across retries, re-mint fresh secret per foreground (dissolves deferred-deep-link + expiry), `get_public_key` resume probe on foreground, ack-timeout = retry not error, fetch-kind:0-before-offering-profile, tolerate profile-less pubkeys, never hardcode proxy.clave.casa.
+- [ ] **web: `static/brand/` button assets** — promised in integrations.md since May; App Store trigger long passed.
+- [ ] **docs: integrations.md rewrite** — headline the shipped-but-undocumented lock-screen Face-ID Approve (works as a banner over the foregrounded partner app — the actual smooth-as-hell ingredient), rust-nostr warning, `LSApplicationQueriesSchemes` + `canOpenURL("clave://")` + SKOverlay in-context install recipe for native partners (SKOverlay validated from native apps, NOT from Safari), EU storefront → TestFlight fallback.
+- [ ] **Week-1 empirical gates** — does relay.powr.build store kind:24133 (ephemeral range)?; on-device stash→generate/import→replay incl. partner-killed-during-install; SKOverlay + canOpenURL from a scratch partner app; Smart-Banner OPEN `app-argument` on the real page.
+
+### Phase 2 — smooth + robust (weeks 3–8)
+
+- [ ] **iOS: `callback=` param** — shown in ApprovalSheet, opened only after foreground approval, https callback should match metadata `url` registrable domain, never on denial, never from lock-screen signing. Plus `expiry=` and `flow=signup|login` hints.
+- [ ] **iOS: idempotent connect re-ack window** — identical client pubkey + secret within ~10 min of successful pairing → silent duplicate ack (already-paired-only). The signer-side belt to the SDK's resume-probe braces; write up as the NIP-46 mobile erratum.
+- [ ] **iOS: signup write-set consent** — "Let _Partner_ set up your profile (kind 0) and relay list (kind 10002)", offered ONLY for keys generated during the flow, never for imported nsecs (imported identities likely have an existing kind:0 — same clobber-hazard class as the kind:0 wipe hotfix, PR #1). Partner publishes through the session; Clave builds no native profile UI.
+- [ ] **iOS: `session_terminated` publish side** (receiver shipped 2026-05-03 `27c175b`) + SwiftPM package with the SKOverlay funnel; Discover-tab partner list.
+- [ ] **NIP drafts** — callback/expiry/flow, re-ack, metadata 4th param, accounts=multi, session_terminated; all optional/ignorable and signer-agnostic ("Sign in with Nostr, best on Clave").
+
+### Rejected (unanimous across the four-lens design review — decisions, not omissions)
+
+App Clip; clipboard/pasteboard deferred deep links; any broker/attribution server; AASA scope
+broadening; partner-mintable bunker URIs; signer-side ack echo loop (timing race — client-
+initiated recovery dominates); relay-stored-ack polling as a MUST (kind:24133 is ephemeral —
+pending the week-1 relay test).
+
+### Blockers / open questions for Conduit
+
+Stack (rust-nostr? NDK replacement?), native vs web, EU merchants, and whether Conduit
+publishes merchant kind:0/10002 (preferred) or the `/connect#bunker=` editor handoff is v1's
+profile path. Also: proxy is one Node process + file-backed JSON co-located with
+relay.powr.build — harden before any co-marketed launch.
 
 ## Marketing landing follow-ups (post-deploy)
 
