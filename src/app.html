@@ -40,27 +40,31 @@
 		/>
 		<meta name="twitter:image" content="https://clave.casa/og-image.png" />
 
-		<!-- Smart App Banner for the /connect handoff, templated at head-parse
-		     time. Safari reads apple-itunes-app on initial parse, and this app
-		     is client-only (ssr=false), so <svelte:head> would be too late. The
-		     banner only delivers when Clave is installed — it is the post-install
-		     OPEN affordance, not a through-install channel — and its app-argument
-		     is the clave://connect re-fire link so OPEN lands the request in the
-		     app. Same rules as src/lib/connect-inbound.ts smartBannerContent().
-		     Scoped to /connect so the marketing pages don't grow a banner. -->
+		<!-- Smart App Banner (Safari), site-wide. Static so every page carries it
+		     at head-parse time — Safari reads apple-itunes-app on initial parse,
+		     and this app is client-only (ssr=false), so <svelte:head> would be
+		     too late. Installed → OPEN launches Clave; not installed → VIEW goes
+		     to the App Store. It is a post-install OPEN affordance, not a
+		     through-install channel. -->
+		<meta name="apple-itunes-app" content="app-id=6762104155" />
+
+		<!-- On /connect with a nostrconnect URI, add app-argument = the
+		     clave://connect re-fire link so OPEN lands the request in the app.
+		     Runs inline, right after the tag, before parsing continues. Same
+		     rules as src/lib/connect-inbound.ts smartBannerContent(). Whether
+		     Safari honors the pre-parse mutation is an open device gate; if it
+		     doesn't, /connect still gets the plain banner and keeps its own
+		     "Installed? Open Clave" button. -->
 		<script>
 			(function () {
 				try {
 					if (!/^\/connect\/?$/.test(location.pathname)) return;
 					var uri = new URLSearchParams(location.search).get('uri');
-					var content = 'app-id=6762104155';
-					if (uri && uri.indexOf('nostrconnect://') === 0) {
-						content += ', app-argument=clave://connect?uri=' + encodeURIComponent(uri);
+					if (!uri || uri.indexOf('nostrconnect://') !== 0) return;
+					var m = document.querySelector('meta[name="apple-itunes-app"]');
+					if (m) {
+						m.content = 'app-id=6762104155, app-argument=clave://connect?uri=' + encodeURIComponent(uri);
 					}
-					var m = document.createElement('meta');
-					m.name = 'apple-itunes-app';
-					m.content = content;
-					document.head.appendChild(m);
 				} catch (e) {
 					/* never block the page over a banner */
 				}
