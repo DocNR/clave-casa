@@ -53,10 +53,15 @@ pending the week-1 relay test).
 
 ### Blockers / open questions for Conduit
 
-Stack (rust-nostr? NDK replacement?), native vs web, EU merchants, and whether Conduit
-publishes merchant kind:0/10002 (preferred) or the `/edit#bunker=` editor handoff is v1's
-profile path. Also: proxy is one Node process + file-backed JSON co-located with
-relay.powr.build — harden before any co-marketed launch.
+**Two of four answered 2026-09-02 from `github.com/Conduit-BTC/conduit-mono` @ `827ff43`** (Eric: "ready to move on an integration"). Full detail in the clave spec's "Open questions" section.
+
+- **Stack: `nostr-tools` 2.25.0 (NIP-46 transport) + `@nostr-dev-kit/ndk` 3.0.3 (signer abstraction).** Not rust-nostr — the ≤0.44.2 bug is moot for them.
+- **Web only** — React + Vite merchant PWA on Cloudflare Pages; no native/RN/Capacitor. ⇒ `clave-connect.js` is the SDK surface; SwiftPM/RN not needed for Conduit.
+- They **already have a hardened NIP-46 client** (both flows, IndexedDB-wrapped key, e2e tests) and already link Clave as a recommended signer with "Clave handoff on iPhone" as a required QA lane. ⇒ the `sdk.js` item wants rescoping to a thin connect/handoff shim + documented iOS return path behind their existing "Open in signer" anchor (`packages/ui/src/components/SignerSwitch.tsx:365`) — pending Daniel's call.
+- Gotchas to raise with them: they send `clientMetadata {name, url}` with **no `image`** (ask them to add one — drives the new-user banner/ApprovalSheet avatar); they **never call `switch_relays`** and pair over their own 2–3 relays, so verify the proxy picks up a Conduit pairing's relay list for push-wake (or have them include `wss://relay.powr.build`).
+- Still open: EU merchants; whether Conduit publishes merchant kind:0/10002 through the session (note: Conduit never holds/generates a merchant key today — keyless onboarding is "go to nstart.me / Alby, come back").
+
+Also: proxy is one Node process + file-backed JSON co-located with relay.powr.build — harden before any co-marketed launch.
 
 ## Marketing landing follow-ups (post-deploy)
 
