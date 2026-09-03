@@ -21,10 +21,11 @@
 	} from '$lib/marketing';
 	import {
 		InboundStash,
+		callerCaption,
 		callerHeadline,
+		callerHeadlineIsFingerprint,
 		claveOpenLink,
 		detectPlatform,
-		displayDomain,
 		fingerprint,
 		parseNostrconnect,
 		type ParsedNostrconnect,
@@ -352,13 +353,15 @@
 		}[stage ?? 'parsing'] ?? 'Working')
 	);
 
-	// Caller display, domain-first: the registrable domain of the self-asserted
-	// url is the headline; the self-asserted name is shown smaller and marked
-	// unverified; the client-pubkey fingerprint is always shown. Same posture as
-	// Clave's ApprovalSheet and onboarding banner.
+	// Caller display, domain-first: the full host of the self-asserted url is
+	// the headline, else the client-pubkey fingerprint — the self-asserted name
+	// never takes the headline slot. Anything self-asserted (name, icon) is
+	// shown smaller with a fixed "· unverified" marker that cannot be truncated
+	// away. Same rules as Clave's ApprovalSheet and onboarding banner
+	// (CallerIdentity.swift).
 	const callerName = $derived(inboundParsed ? callerHeadline(inboundParsed) : '');
-	const callerDomain = $derived(inboundParsed ? displayDomain(inboundParsed.url) : null);
-	const callerSelfName = $derived(inboundParsed?.name?.trim() || '');
+	const headlineIsFingerprint = $derived(inboundParsed ? callerHeadlineIsFingerprint(inboundParsed) : false);
+	const callerCaptionParts = $derived(inboundParsed ? callerCaption(inboundParsed) : null);
 	const callerFingerprint = $derived(inboundParsed ? fingerprint(inboundParsed.clientPubkey) : '');
 	const openClaveHref = $derived(inboundUri ? claveOpenLink(inboundUri) : '');
 </script>
@@ -372,7 +375,7 @@
 			<h1 class="text-3xl font-semibold">This request expired</h1>
 			<p class="text-sm text-[var(--clave-text-muted)]">
 				Connect requests are only valid for a few minutes. Return to
-				<strong class="text-[var(--clave-text)]">{inboundParsed ? callerHeadline(inboundParsed) : 'the app'}</strong>
+				<strong class="text-[var(--clave-text)]">{inboundParsed && !headlineIsFingerprint ? callerName : 'the app'}</strong>
 				and tap Connect with Clave again — it takes a moment.
 			</p>
 		</header>
@@ -421,16 +424,24 @@
 					</div>
 				{/if}
 				<div class="min-w-0">
-					<p class="truncate text-base font-semibold text-[var(--clave-text)]">{callerName}</p>
+					<p
+						class="truncate text-base font-semibold text-[var(--clave-text)]"
+						class:font-mono={headlineIsFingerprint}
+					>
+						{callerName}
+					</p>
 					<p class="text-sm text-[var(--clave-text-muted)]">wants to connect</p>
-					{#if callerSelfName && callerDomain}
-						<p class="truncate text-xs text-[var(--clave-text-muted)]">
-							calls itself “{callerSelfName}” · unverified
+					{#if callerCaptionParts}
+						<!-- The marker is a fixed sibling so a long self-asserted name can
+						     never push "unverified" out of view. -->
+						<p class="flex min-w-0 items-baseline gap-1 text-xs text-[var(--clave-text-muted)]">
+							<span class="min-w-0 truncate">{callerCaptionParts.lead}</span>
+							<span class="shrink-0">{callerCaptionParts.marker}</span>
 						</p>
-					{:else if callerSelfName}
-						<p class="text-xs text-[var(--clave-text-muted)]">unverified</p>
 					{/if}
-					<p class="font-mono text-xs text-[var(--clave-text-muted)]">{callerFingerprint}</p>
+					{#if !headlineIsFingerprint}
+						<p class="font-mono text-xs text-[var(--clave-text-muted)]">{callerFingerprint}</p>
+					{/if}
 				</div>
 			</div>
 		{/if}
