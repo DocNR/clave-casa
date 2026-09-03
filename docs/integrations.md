@@ -42,6 +42,8 @@ claveButton.href = claveUrl;            // new — Clave-specific button
 
 That's it. The button can be an `<a>` tag (recommended — iOS recognizes it as a Universal Link target on tap) or a programmatic `window.location.href = claveUrl`. The relay-listening logic that consumes the signer's ack stays unchanged.
 
+**One relay you must include: `wss://relay.powr.build`.** Put it in the `relays` you pass to `createNostrConnectURI`. Clave answers requests on any relay while it's in the foreground, but a *backgrounded* Clave is woken by a push that its proxy sends only for requests it sees on `relay.powr.build`. Your later `sign_event` / `nip44_*` requests go to the relays from the URI — if that set doesn't include it, Clave never wakes and the request times out. (The shim below merges it in for you.)
+
 ## Drop-in snippets
 
 ### Vanilla HTML/JS
@@ -209,6 +211,7 @@ Full notes, knobs, and do/don't in [`static/brand/README.md`](../static/brand/RE
 - **Universal Links don't fire from JavaScript-triggered navigations in some webviews.** Use a real `<a>` tag with `href` whenever possible. `window.location.href` works in Safari but can be flaky in third-party browsers.
 - **AASA cache propagation.** First-time devices fetch AASA opportunistically — usually within seconds of first attempting a Universal Link, but can take longer. The fallback page handles this gracefully (renders the QR).
 - **Don't double-encode the URI.** `encodeURIComponent(ncUri)` once; passing an already-encoded URI gets `%`-encoded a second time and breaks parsing.
+- **Include `wss://relay.powr.build` in the URI's relays.** It's the only relay Clave's push-wake proxy watches; without it, requests to a backgrounded Clave time out. If your client caps the relay count, swap one public relay out rather than leaving this one off.
 
 ## Reciprocal: receiving a bunker URI from clave.casa
 
