@@ -1,26 +1,26 @@
-# Sign in with Clave — brand assets
+# Connect with Clave — brand assets
 
-The "Sign in with Clave" button, in the same idiom as the Sign in with Google / Apple buttons, built from Clave's current logo and clave.casa's design tokens. Served from `https://clave.casa/brand/`.
+The "Connect with Clave" button, in the same idiom as the Sign in with Google / Apple buttons, built from Clave's current logo and clave.casa's design tokens. Served from `https://clave.casa/brand/`.
 
 ## Drop-in button
 
 Include the stylesheet once, then use the markup. The stylesheet is self-contained — the Clave mark is embedded in it, so there is nothing else to host.
 
 ```html
-<link rel="stylesheet" href="https://clave.casa/brand/sign-in-with-clave.css">
+<link rel="stylesheet" href="https://clave.casa/brand/connect-with-clave.css">
 
-<button type="button" class="clave-signin clave-signin--brand">
-  <span class="clave-signin__mark" aria-hidden="true"></span>
-  Sign in with Clave
+<button type="button" class="clave-connect clave-connect--light">
+  <span class="clave-connect__mark" aria-hidden="true"></span>
+  Connect with Clave
 </button>
 ```
 
 An `<a>` works the same way — use it when the button is a real link (for example to the `https://clave.casa/connect/?uri=…` Universal Link on mobile Safari):
 
 ```html
-<a class="clave-signin clave-signin--light" href="https://clave.casa/connect/?uri=…" target="_self">
-  <span class="clave-signin__mark" aria-hidden="true"></span>
-  Sign in with Clave
+<a class="clave-connect clave-connect--light" href="https://clave.casa/connect/?uri=…" target="_self">
+  <span class="clave-connect__mark" aria-hidden="true"></span>
+  Connect with Clave
 </a>
 ```
 
@@ -32,28 +32,28 @@ Recommended: match your UI — `--light` on light pages, `--dark` on dark pages 
 
 | Class | Use on | Look |
 |---|---|---|
-| `clave-signin--light` | light UIs (recommended) | white, 1px violet-tinted border, dark label |
-| `clave-signin--dark` | dark UIs (recommended) | dark surface, 1px border, light label |
-| `clave-signin--brand` | as a primary action | Clave Violet gradient, white label |
-| add `clave-signin--block` | narrow layouts | full-width |
+| `clave-connect--light` | light UIs (recommended) | white, 1px violet-tinted border, dark label |
+| `clave-connect--dark` | dark UIs (recommended) | dark surface, 1px border, light label |
+| `clave-connect--brand` | as a primary action | Clave Violet gradient, white label |
+| add `clave-connect--block` | narrow layouts | full-width |
 
 ## Lining up beside Google and Apple
 
 Default height is **44px** (Apple's). Google's button is 40px; if you're placing them side by side, match whichever you're using:
 
 ```css
-.clave-signin { --clave-signin-height: 40px; }
+.clave-connect { --clave-connect-height: 40px; }
 ```
 
-Other knobs: `--clave-signin-radius` (default 12px) and `--clave-signin-mark` (default 20px). Keep the label text exactly "Sign in with Clave".
+Other knobs: `--clave-connect-radius` (default 12px) and `--clave-connect-mark` (default 20px). Keep the label text exactly "Connect with Clave".
 
 ## Static images
 
 Prefer the CSS button — it stays crisp at every size and picks up your page's font rendering. Where you need a static image (email, a design tool, a platform that strips CSS), use the SVGs:
 
-- `sign-in-with-clave-brand.svg`
-- `sign-in-with-clave-light.svg`
-- `sign-in-with-clave-dark.svg`
+- `connect-with-clave-brand.svg`
+- `connect-with-clave-light.svg`
+- `connect-with-clave-dark.svg`
 
 Each is 200×44 and self-contained.
 
