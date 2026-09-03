@@ -22,8 +22,8 @@ export const INBOUND_STASH_KEY = 'clave-casa.inbound.v1';
 
 const HEX64 = /^[0-9a-f]{64}$/i;
 const IPV4 = /^\d{1,3}(\.\d{1,3}){3}$/;
-/** Second-level labels that commonly sit under a 2-letter ccTLD (example.co.uk → keep three labels). */
-const CC_SECOND_LEVEL = new Set(['co', 'com', 'org', 'net', 'gov', 'ac', 'edu', 'ne', 'or', 'go', 'nom', 'gob']);
+/** The only characters a displayed host may contain. Punycode (xn--…) is ASCII and shows literally. */
+const HOST_ASCII = /^[a-z0-9.-]+$/;
 
 export interface ParsedNostrconnect {
 	clientPubkey: string;
@@ -80,7 +80,8 @@ export function parseNostrconnect(uri: string): ParsedNostrconnect | null {
 				perms = val ? val.split(',').filter(Boolean) : [];
 				break;
 			case 'name':
-				name = val || undefined;
+				// A whitespace-only name counts as absent, like on iOS.
+				name = val.trim() || undefined;
 				break;
 			case 'url':
 				url = val || undefined;
@@ -95,12 +96,15 @@ export function parseNostrconnect(uri: string): ParsedNostrconnect | null {
 }
 
 /**
- * The registrable domain of a self-asserted `url`, for domain-first display.
- * Same rules as the iOS CallerIdentity helper: http(s) only; lowercase; strip
- * a leading "www."; collapse subdomains to the registrable part (keep three
- * labels for co.uk-style suffixes); null for IPs, localhost, non-http(s)
- * schemes, and unparseable input. Userinfo tricks ("clave.casa@evil.com") and
- * path tricks ("evil.com/clave.casa") resolve to the real host by construction.
+ * The host of a self-asserted `url`, for domain-first display. Same rules as
+ * the iOS CallerIdentity helper: http(s) only; lowercase; the FULL host minus
+ * one leading "www." — never collapsed to a "registrable" part, because
+ * public-suffix platforms (github.io, pages.dev, vercel.app, …) would launder
+ * attacker.github.io into github.io; ASCII only, so a Unicode host shows as
+ * its literal punycode (xn--…) instead of a homograph of a trusted domain;
+ * null for IPs, localhost, single-label hosts, non-http(s) schemes, and
+ * unparseable input. Userinfo tricks ("clave.casa@evil.com") and path tricks
+ * ("evil.com/clave.casa") resolve to the real host by construction.
  * Not a security boundary — a verified-caller badge is a later feature.
  */
 export function displayDomain(url: string | undefined | null): string | null {
@@ -112,16 +116,14 @@ export function displayDomain(url: string | undefined | null): string | null {
 		return null;
 	}
 	if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
+	// WHATWG URL already yields the ASCII (punycode) hostname; the guard keeps
+	// that a hard rule so nothing outside [a-z0-9.-] can reach the headline
+	// (IPv6 literals come back bracketed and fail it too).
 	let host = u.hostname.toLowerCase().replace(/\.$/, '');
-	if (!host || host === 'localhost' || host.includes(':') || host.startsWith('[') || IPV4.test(host)) return null;
+	if (!host || !HOST_ASCII.test(host) || host === 'localhost' || IPV4.test(host)) return null;
 	if (host.startsWith('www.')) host = host.slice(4);
-	const labels = host.split('.').filter(Boolean);
-	if (labels.length < 2) return null;
-	if (labels.length === 2) return labels.join('.');
-	const tld = labels[labels.length - 1];
-	const second = labels[labels.length - 2];
-	const keep = tld.length === 2 && CC_SECOND_LEVEL.has(second) && labels.length >= 3 ? 3 : 2;
-	return labels.slice(-keep).join('.');
+	if (host.split('.').filter(Boolean).length < 2) return null;
+	return host;
 }
 
 /** Short client-pubkey fingerprint, same shape as Clave's ClientIdentityHeader. */
@@ -130,9 +132,32 @@ export function fingerprint(pubkey: string): string {
 	return `${pubkey.slice(0, 8)}…${pubkey.slice(-4)}`;
 }
 
-/** Domain first; else the self-asserted name (still unverified); else the fingerprint. */
+/**
+ * Domain first; else the client-pubkey fingerprint. The self-asserted name
+ * NEVER occupies the headline slot — a name like "clave.casa" would otherwise
+ * be indistinguishable from the real domain headline. It only ever appears in
+ * the unverified caption (see callerCaption).
+ */
 export function callerHeadline(p: ParsedNostrconnect): string {
-	return displayDomain(p.url) ?? (p.name && p.name.trim() ? p.name.trim() : undefined) ?? fingerprint(p.clientPubkey);
+	return displayDomain(p.url) ?? fingerprint(p.clientPubkey);
+}
+
+/** True when the headline is already the fingerprint, so the separate fingerprint line should be suppressed. */
+export function callerHeadlineIsFingerprint(p: ParsedNostrconnect): boolean {
+	return displayDomain(p.url) === null;
+}
+
+/**
+ * The unverified caption, split so the marker can be rendered as a fixed,
+ * non-truncating sibling: `{ lead: 'calls itself “name”', marker: '· unverified' }`
+ * for a named caller, `{ lead: 'icon', marker: '· unverified' }` for an
+ * icon-only caller (a self-asserted image deserves the marker too), null when
+ * nothing self-asserted is shown.
+ */
+export function callerCaption(p: ParsedNostrconnect): { lead: string; marker: string } | null {
+	if (p.name) return { lead: `calls itself “${p.name}”`, marker: '· unverified' };
+	if (p.image) return { lead: 'icon', marker: '· unverified' };
+	return null;
 }
 
 /** The reserved-scheme re-fire link Clave handles (clave://connect?uri=…), encoded once. */

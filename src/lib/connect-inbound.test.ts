@@ -4,6 +4,8 @@ import {
 	displayDomain,
 	fingerprint,
 	callerHeadline,
+	callerHeadlineIsFingerprint,
+	callerCaption,
 	claveOpenLink,
 	smartBannerContent,
 	detectPlatform,
@@ -38,6 +40,11 @@ describe('parseNostrconnect (mirrors Clave/Shared/NostrConnectParser.swift)', ()
 		expect(p!.name).toBe('My+Client');
 	});
 
+	it('treats a whitespace-only name as absent, like iOS', () => {
+		const p = parseNostrconnect(`nostrconnect://${PK}?relay=wss%3A%2F%2Fa&secret=s&name=%20%20`);
+		expect(p!.name).toBeUndefined();
+	});
+
 	it('lowercases the client pubkey', () => {
 		const p = parseNostrconnect(`nostrconnect://${PK.toUpperCase()}?relay=wss%3A%2F%2Fa&secret=s`);
 		expect(p!.clientPubkey).toBe(PK);
@@ -56,14 +63,20 @@ describe('displayDomain (same rules as the iOS CallerIdentity helper)', () => {
 	it.each([
 		['https://clave.casa', 'clave.casa'],
 		['https://www.clave.casa/connect', 'clave.casa'],
-		['https://shop.conduit.market', 'conduit.market'],
-		['https://SELL.Conduit.Market/x?y=1', 'conduit.market'],
-		['https://app.example.co.uk', 'example.co.uk'],
+		['https://shop.conduit.market', 'shop.conduit.market'],
+		['https://SELL.Conduit.Market:8443/x?y=1', 'sell.conduit.market'],
+		['https://app.example.co.uk', 'app.example.co.uk'],
 		['http://example.com', 'example.com'],
-		['https://clave.casa.evil.com', 'evil.com'],
-		['https://clave.casa@evil.com/', 'evil.com']
-	])('%s → %s', (input, expected) => {
+		['https://clave.casa.evil.com', 'clave.casa.evil.com'],
+		['https://clave.casa@evil.com/', 'evil.com'],
+		['https://example.com.', 'example.com']
+	])('%s → %s (full host, never collapsed)', (input, expected) => {
 		expect(displayDomain(input)).toBe(expected);
+	});
+
+	it('never launders a public-suffix platform subdomain into the platform', () => {
+		expect(displayDomain('https://attacker.github.io')).toBe('attacker.github.io');
+		expect(displayDomain('https://attacker.pages.dev')).toBe('attacker.pages.dev');
 	});
 
 	it.each([
@@ -75,13 +88,30 @@ describe('displayDomain (same rules as the iOS CallerIdentity helper)', () => {
 		['https://127.0.0.1'],
 		['https://[::1]/'],
 		['https://localhost:3000'],
-		['https://evil.com/clave.casa'.replace('https://evil.com/clave.casa', 'https://')]
+		['https://intranet'],
+		['https://']
 	])('%s → null', (input) => {
 		expect(displayDomain(input as string | undefined)).toBeNull();
 	});
 
 	it('never lets a path segment masquerade as the domain', () => {
 		expect(displayDomain('https://evil.com/clave.casa')).toBe('evil.com');
+	});
+
+	it('shows a Unicode host as its literal punycode, never as a homograph of a trusted domain', () => {
+		// Cyrillic с ӏ а ѵ е — pixel-identical to "clave" in most fonts.
+		const shown = displayDomain('https://сӏаѵе.casa');
+		expect(shown).not.toBe('clave.casa');
+		expect(shown).toMatch(/^xn--[a-z0-9-]+\.casa$/);
+		expect(displayDomain('https://xn--80ak8a1oqq.casa')).toMatch(/^xn--/);
+	});
+
+	it('rejects hosts carrying invisible or bidi characters instead of rendering them', () => {
+		const rlo = displayDomain('https://clave.casa‮evil.com');
+		expect(rlo === null || /^[a-z0-9.-]+$/.test(rlo)).toBe(true);
+		const zwsp = displayDomain('https://clave.casa​evil.com');
+		expect(zwsp).not.toBe('clave.casa');
+		if (zwsp !== null) expect(zwsp).toMatch(/^[a-z0-9.-]+$/);
 	});
 });
 
@@ -90,11 +120,25 @@ describe('fingerprint + callerHeadline', () => {
 		expect(fingerprint(PK)).toBe('abc123de…abcd');
 	});
 
-	it('headline prefers the domain, then the self-asserted name, then the fingerprint', () => {
+	it('headline is the domain, else the fingerprint — never the self-asserted name', () => {
 		const p = parseNostrconnect(URI)!;
-		expect(callerHeadline(p)).toBe('conduit.market');
-		expect(callerHeadline({ ...p, url: undefined })).toBe('Signin PoC');
-		expect(callerHeadline({ ...p, url: undefined, name: undefined })).toBe('abc123de…abcd');
+		expect(callerHeadline(p)).toBe('shop.conduit.market');
+		expect(callerHeadline({ ...p, url: undefined })).toBe('abc123de…abcd');
+		expect(callerHeadline({ ...p, url: undefined, name: 'clave.casa' })).toBe('abc123de…abcd');
+		expect(callerHeadline({ ...p, url: 'https://localhost', name: 'clave.casa' })).toBe('abc123de…abcd');
+	});
+
+	it('flags when the headline already is the fingerprint, so the fingerprint line can be suppressed', () => {
+		const p = parseNostrconnect(URI)!;
+		expect(callerHeadlineIsFingerprint(p)).toBe(false);
+		expect(callerHeadlineIsFingerprint({ ...p, url: undefined })).toBe(true);
+	});
+
+	it('caption: named → "calls itself" + fixed marker; icon-only → "icon" + marker; nothing self-asserted → null', () => {
+		const p = parseNostrconnect(URI)!;
+		expect(callerCaption(p)).toEqual({ lead: 'calls itself “Signin PoC”', marker: '· unverified' });
+		expect(callerCaption({ ...p, name: undefined })).toEqual({ lead: 'icon', marker: '· unverified' });
+		expect(callerCaption({ ...p, name: undefined, image: undefined })).toBeNull();
 	});
 });
 
