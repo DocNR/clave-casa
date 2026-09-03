@@ -129,13 +129,25 @@ In every case, your client's relay listener picks up the signer's ack the same w
 
 ## Brand
 
-There isn't an official "Connect with Clave" button asset yet — feel free to:
+The official "Connect with Clave" button lives at `https://clave.casa/brand/` (source: [`static/brand/`](../static/brand/)). It's in the same idiom as the Sign in with Google / Apple buttons, so it lines up beside them.
 
-- Use the Clave wordmark + your app's button styling
-- Use the iOS app icon (when distributed via App Store, available in [Clave's repo](https://github.com/DocNR/clave))
-- Build your own using Clave's brand colors (Violet `#7A8CFF` → `#A14AFF` gradient, accent `#592EFF`)
+Include the stylesheet once — it's self-contained, the Clave mark is embedded — and put the classes on the `<a>` from the snippets above:
 
-A formal brand asset package will land in this repo at `static/brand/` once Clave hits the App Store; until then, copy what works.
+```html
+<link rel="stylesheet" href="https://clave.casa/brand/connect-with-clave.css">
+
+<a class="clave-connect clave-connect--light" href={claveUrl} target="_self">
+  <span class="clave-connect__mark" aria-hidden="true"></span>
+  Connect with Clave
+</a>
+```
+
+- **Variants:** `clave-connect--light` (light UIs) and `clave-connect--dark` (dark UIs) are the recommended defaults; `clave-connect--brand` (Clave Violet gradient) when the button is the page's one primary action; add `clave-connect--block` for full-width.
+- **Beside Google/Apple:** default height is 44px (Apple's); set `--clave-connect-height: 40px` to match Google's.
+- **Static images** (email, design tools): `connect-with-clave-{light,dark,brand}.svg`, 200×44, self-contained.
+- Keep the label exactly "Connect with Clave" and the mark as the circle it ships as.
+
+Full notes, knobs, and do/don't in [`static/brand/README.md`](../static/brand/README.md).
 
 ## Constraints to keep in mind
 
@@ -166,6 +178,6 @@ Filing issues / PRs against [DocNR/clave-casa](https://github.com/DocNR/clave-ca
 
 - Clients shipping Universal Link support (we'll add a "compatible clients" list to the README)
 - Edge cases that break (e.g. specific browsers / webviews / iOS versions where the fallback page misbehaves)
-- Brand asset requests (button SVGs, icon variants, sizing recommendations)
+- Brand asset requests beyond what's in `static/brand/` (icon variants, other sizes, other formats)
 
 The goal is to make `nostrconnect://` scheme-squatting a non-issue across the Nostr ecosystem. Every client that adopts Universal Links makes the bug less visible to users.
