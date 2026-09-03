@@ -13,10 +13,23 @@
 	import { copyToClipboard } from '$lib/clipboard';
 	import {
 		AMBER_PLAY_STORE_URL,
+		CLAVE_APP_STORE_URL,
 		CLAVE_INSTALL_LABEL,
 		CLAVE_INSTALL_URL,
-		NSEC_APP_URL
+		NSEC_APP_URL,
+		TESTFLIGHT_URL
 	} from '$lib/marketing';
+	import {
+		InboundStash,
+		callerHeadline,
+		claveOpenLink,
+		detectPlatform,
+		displayDomain,
+		fingerprint,
+		parseNostrconnect,
+		type ParsedNostrconnect,
+		type Platform
+	} from '$lib/connect-inbound';
 
 	type Tab = 'qr' | 'paste';
 
@@ -42,10 +55,24 @@
 	// render the URI as a QR for the user's actually-installed signer to
 	// scan. clave.casa is just a transit display in this flow — the original
 	// client (e.g. nostrudel) is listening on the URI's relay for the ack.
+	//
+	// "Sign in with Clave" hardening (2026-09): the request is also kept in
+	// sessionStorage (tab-scoped, device-local, 10-minute TTL) so it survives
+	// the App Store round trip; the caller is shown domain-first with the
+	// self-asserted name marked unverified; on iOS the primary action is a
+	// clave://connect re-fire button ("Installed? Open Clave") because a
+	// same-domain Universal Link deliberately doesn't fire and JS can't
+	// re-fire one; the install panel is platform-aware; and an expired
+	// request gets calm copy instead of a failure.
 	let inboundUri = $state('');
 	let inboundQrSvg = $state('');
 	let inboundCopied = $state(false);
 	let inboundCopyTimer: ReturnType<typeof setTimeout> | undefined;
+	let inboundParsed = $state<ParsedNostrconnect | null>(null);
+	let inboundExpired = $state(false);
+	let callerImageFailed = $state(false);
+	let inboundStash: InboundStash | undefined;
+	let platform = $state<Platform>('desktop');
 
 	// Stale-connection banner state. Set when /edit auto-cleans a connection
 	// after the signer rejected the bunker secret (deleted iOS-side) and
@@ -54,6 +81,14 @@
 	let staleBanner = $state(false);
 
 	onMount(() => {
+		try {
+			inboundStash = new InboundStash(sessionStorage);
+		} catch {
+			// Private mode / sandboxed storage: fall back to memory-only.
+			inboundStash = new InboundStash(new Map());
+		}
+		platform = detectPlatform(navigator.userAgent, navigator.platform, navigator.maxTouchPoints ?? 0);
+
 		// Stale-redirect banner: /edit redirects here with ?reason=stale when
 		// it auto-cleans a dead connection. Show the banner, then scrub the
 		// query so a refresh doesn't keep showing it.
@@ -83,6 +118,11 @@
 		// (third party generated a nostrconnect URI for our signer to consume).
 		const queryUri = new URLSearchParams(location.search).get('uri');
 		if (queryUri) {
+			if (queryUri.startsWith('nostrconnect://')) {
+				// Stash BEFORE scrubbing the URL: the request must survive an
+				// App Store trip and a reload, and the URL is the only copy.
+				inboundStash.stash(queryUri);
+			}
 			// Scrub the query from the URL bar — mirrors the #bunker= scrubbing
 			// pattern. Same reason: avoid leaking the URI into Cloudflare logs
 			// via referrer or browser history.
@@ -100,6 +140,20 @@
 			status = 'error';
 			errorMessage =
 				"That link's URI scheme isn't recognized. Expected bunker:// or nostrconnect://.";
+			return;
+		}
+
+		// (2b) No query, but a request was stashed earlier in this tab — the user
+		// came back from the App Store (or reloaded). Restore it; if it has
+		// outlived its window, say so calmly instead of failing.
+		const stashed = inboundStash.read();
+		if (stashed) {
+			if (stashed.expired) {
+				inboundExpired = true;
+				inboundParsed = stashed.parsed;
+				return;
+			}
+			void renderInboundUri(stashed.uri);
 			return;
 		}
 
@@ -121,6 +175,7 @@
 	// the signer's ack — clave.casa just displays the QR and steps aside.
 	async function renderInboundUri(uri: string) {
 		inboundUri = uri;
+		inboundParsed = parseNostrconnect(uri);
 		// Stop the outbound nostrconnect flow if it kicked off — we're not
 		// generating our own URI in this mode.
 		ncAbort?.abort();
@@ -133,6 +188,14 @@
 		} catch (e) {
 			console.warn('[clave.casa] inbound QR render failed:', e);
 		}
+	}
+
+	// The user tapped "Installed? Open Clave". The anchor does the navigation
+	// (clave://connect?uri=…); we only record that this request has been
+	// re-fired so the stash is dropped after this view — a redeemed secret is
+	// absorbed by Clave's re-ack window, a dead one shouldn't keep resurfacing.
+	function openInClave() {
+		inboundStash?.markRefired();
 	}
 
 	async function copyInboundUri() {
@@ -288,26 +351,113 @@
 			ready: 'Ready'
 		}[stage ?? 'parsing'] ?? 'Working')
 	);
+
+	// Caller display, domain-first: the registrable domain of the self-asserted
+	// url is the headline; the self-asserted name is shown smaller and marked
+	// unverified; the client-pubkey fingerprint is always shown. Same posture as
+	// Clave's ApprovalSheet and onboarding banner.
+	const callerName = $derived(inboundParsed ? callerHeadline(inboundParsed) : '');
+	const callerDomain = $derived(inboundParsed ? displayDomain(inboundParsed.url) : null);
+	const callerSelfName = $derived(inboundParsed?.name?.trim() || '');
+	const callerFingerprint = $derived(inboundParsed ? fingerprint(inboundParsed.clientPubkey) : '');
+	const openClaveHref = $derived(inboundUri ? claveOpenLink(inboundUri) : '');
 </script>
 
 <div class="mx-auto max-w-md space-y-5 py-6">
-	{#if inboundUri}
-		<!-- Inbound-URI fallback: a third-party app sent the user here via a
-		     Universal Link, but Clave isn't intercepting (not installed, AASA
-		     not yet propagated, or both). Render the URI as a QR for whatever
-		     signer the user actually has, plus install links for users who
-		     have no signer at all. -->
+	{#if inboundExpired}
+		<!-- The stashed request outlived its 10-minute window (the user took a
+		     while in the App Store, or came back much later). Calm copy — this
+		     is the designed retry path, not a failure. -->
 		<header class="space-y-2">
-			<h1 class="text-3xl font-semibold">Open in your signer</h1>
+			<h1 class="text-3xl font-semibold">This request expired</h1>
 			<p class="text-sm text-[var(--clave-text-muted)]">
-				A Nostr app sent you a connection request. Scan this code with your signer to complete
-				the connection — clave.casa is just displaying the request.
+				Connect requests are only valid for a few minutes. Return to
+				<strong class="text-[var(--clave-text)]">{inboundParsed ? callerHeadline(inboundParsed) : 'the app'}</strong>
+				and tap Connect with Clave again — it takes a moment.
 			</p>
 		</header>
+		<a
+			href={CLAVE_INSTALL_URL}
+			target="_blank"
+			rel="noopener noreferrer"
+			class="block text-sm text-[var(--clave-tint)] hover:underline"
+		>
+			Don't have Clave yet? Get it from the {CLAVE_INSTALL_LABEL}.
+		</a>
+	{:else if inboundUri}
+		<!-- Inbound-URI fallback: a third-party app sent the user here via a
+		     Universal Link, but Clave isn't intercepting (not installed, AASA
+		     not yet propagated, or both). -->
+		<header class="space-y-2">
+			<h1 class="text-3xl font-semibold">
+				{platform === 'ios' ? 'Connect with Clave' : 'Open in your signer'}
+			</h1>
+			<p class="text-sm text-[var(--clave-text-muted)]">
+				A Nostr app wants to connect to your signer. clave.casa is only relaying the request —
+				your key never touches this page.
+			</p>
+		</header>
+
+		{#if inboundParsed}
+			<!-- Who is asking. Domain first; everything self-asserted is small and
+			     marked unverified. Brand-new users are the most phishable audience. -->
+			<div
+				class="flex items-center gap-3 rounded-2xl border border-[var(--clave-border)] bg-[var(--clave-surface)] p-4"
+			>
+				{#if inboundParsed.image && !callerImageFailed}
+					<img
+						src={inboundParsed.image}
+						alt=""
+						class="h-11 w-11 shrink-0 rounded-full border border-[var(--clave-border)] object-cover"
+						referrerpolicy="no-referrer"
+						onerror={() => (callerImageFailed = true)}
+					/>
+				{:else}
+					<div
+						class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--clave-surface-alt)] font-mono text-xs text-[var(--clave-text-muted)]"
+						aria-hidden="true"
+					>
+						{inboundParsed.clientPubkey.slice(0, 2)}
+					</div>
+				{/if}
+				<div class="min-w-0">
+					<p class="truncate text-base font-semibold text-[var(--clave-text)]">{callerName}</p>
+					<p class="text-sm text-[var(--clave-text-muted)]">wants to connect</p>
+					{#if callerSelfName && callerDomain}
+						<p class="truncate text-xs text-[var(--clave-text-muted)]">
+							calls itself “{callerSelfName}” · unverified
+						</p>
+					{:else if callerSelfName}
+						<p class="text-xs text-[var(--clave-text-muted)]">unverified</p>
+					{/if}
+					<p class="font-mono text-xs text-[var(--clave-text-muted)]">{callerFingerprint}</p>
+				</div>
+			</div>
+		{/if}
+
+		{#if platform === 'ios'}
+			<!-- Primary on iPhone/iPad. A same-domain Universal Link deliberately
+			     doesn't fire and JavaScript can't re-fire one, so the reserved
+			     clave:// scheme is the way back into the app. Works whether or
+			     not the AASA cache has warmed. -->
+			<a
+				href={openClaveHref}
+				onclick={openInClave}
+				class="flex w-full items-center justify-center gap-2.5 rounded-xl bg-[var(--clave-tint)] px-4 py-3 text-sm font-semibold text-[var(--clave-tint-fg)] hover:opacity-90"
+			>
+				<img src="/clave-icon.png" alt="" class="h-5 w-5 rounded-full" />
+				Installed? Open Clave
+			</a>
+		{/if}
 
 		<div
 			class="space-y-4 rounded-2xl border border-[var(--clave-border)] bg-[var(--clave-surface-alt)] p-4"
 		>
+			<p class="text-sm text-[var(--clave-text-muted)]">
+				{platform === 'ios'
+					? 'Or scan this code with a signer on another device.'
+					: 'Scan this code with your signer, or copy the connect string into it.'}
+			</p>
 			<div class="flex justify-center">
 				{#if inboundQrSvg}
 					<div class="rounded-2xl bg-white p-3 shadow-sm">
@@ -366,52 +516,79 @@
 		<section
 			class="space-y-3 rounded-2xl border border-[var(--clave-border)] bg-[var(--clave-surface)] p-4"
 		>
-			<p class="text-sm font-semibold text-[var(--clave-text)]">Don't have a signer?</p>
+			<p class="text-sm font-semibold text-[var(--clave-text)]">
+				{platform === 'ios' ? "Don't have Clave yet?" : "Don't have a signer?"}
+			</p>
 			<p class="text-xs text-[var(--clave-text-muted)]">
-				A NIP-46 signer holds your nsec and approves signing requests on your behalf. Install
-				one of these:
+				A NIP-46 signer holds your nsec and approves signing requests on your behalf.
+				{platform === 'ios'
+					? 'Install Clave, then come back to this tab and tap "Installed? Open Clave".'
+					: 'Install one of these:'}
 			</p>
 			<ul class="space-y-2 text-sm">
-				<li>
-					<a
-						href={CLAVE_INSTALL_URL}
-						target="_blank"
-						rel="noopener noreferrer"
-						class="text-[var(--clave-tint)] hover:underline"
-					>
-						<strong>Clave</strong>
-					</a>
-					<span class="text-[var(--clave-text-muted)]">— iOS, {CLAVE_INSTALL_LABEL}</span>
-				</li>
-				<li>
-					<a
-						href={AMBER_PLAY_STORE_URL}
-						target="_blank"
-						rel="noopener noreferrer"
-						class="text-[var(--clave-tint)] hover:underline"
-					>
-						<strong>Amber</strong>
-					</a>
-					<span class="text-[var(--clave-text-muted)]">— Android, Play Store</span>
-				</li>
-				<li>
-					<a
-						href={NSEC_APP_URL}
-						target="_blank"
-						rel="noopener noreferrer"
-						class="text-[var(--clave-tint)] hover:underline"
-					>
-						<strong>nsec.app</strong>
-					</a>
-					<span class="text-[var(--clave-text-muted)]">— web, no install</span>
-				</li>
+				{#if platform !== 'android'}
+					<li>
+						<a
+							href={CLAVE_INSTALL_URL}
+							target="_blank"
+							rel="noopener noreferrer"
+							class="text-[var(--clave-tint)] hover:underline"
+						>
+							<strong>Clave</strong>
+						</a>
+						<span class="text-[var(--clave-text-muted)]">— iOS, {CLAVE_INSTALL_LABEL}</span>
+						{#if platform === 'ios' && CLAVE_APP_STORE_URL}
+							<span class="block text-xs text-[var(--clave-text-muted)]">
+								Not in your region's App Store yet?
+								<a
+									href={TESTFLIGHT_URL}
+									target="_blank"
+									rel="noopener noreferrer"
+									class="text-[var(--clave-tint)] hover:underline">Join the TestFlight beta</a
+								>.
+							</span>
+						{/if}
+					</li>
+				{/if}
+				{#if platform !== 'ios'}
+					<li>
+						<a
+							href={AMBER_PLAY_STORE_URL}
+							target="_blank"
+							rel="noopener noreferrer"
+							class="text-[var(--clave-tint)] hover:underline"
+						>
+							<strong>Amber</strong>
+						</a>
+						<span class="text-[var(--clave-text-muted)]">— Android, Play Store</span>
+					</li>
+					<li>
+						<a
+							href={NSEC_APP_URL}
+							target="_blank"
+							rel="noopener noreferrer"
+							class="text-[var(--clave-tint)] hover:underline"
+						>
+							<strong>nsec.app</strong>
+						</a>
+						<span class="text-[var(--clave-text-muted)]">— web, no install</span>
+					</li>
+				{/if}
 			</ul>
 		</section>
 
-		<p class="text-xs text-[var(--clave-text-muted)]">
-			Already have Clave installed? The handoff cache may still be propagating (~24h). Try the
-			link again in a few hours, or scan the code above with another device's signer.
-		</p>
+		{#if platform === 'ios'}
+			<p class="text-xs text-[var(--clave-text-muted)]">
+				Already have Clave but the link opened here? Tap “Installed? Open Clave” above — it
+				works even before your device has learned the link. This request stays in this tab
+				for a few minutes.
+			</p>
+		{:else}
+			<p class="text-xs text-[var(--clave-text-muted)]">
+				Have Clave on your iPhone? Open this link there, or scan the code with Clave's
+				Connect tab.
+			</p>
+		{/if}
 	{:else}
 		{#if staleBanner}
 			<!-- Auto-cleaned stale connection — /edit redirected here after the
