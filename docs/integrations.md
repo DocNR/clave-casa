@@ -98,6 +98,60 @@ const claveUrl = computed(
 </script>
 ```
 
+## The shim: `clave-connect.js`
+
+If you'd rather not hand-roll the wrapping and the iOS return leg, there's a small dependency-free ES module that does exactly the Clave-specific parts and nothing else. **You keep your own NIP-46 transport** (nostr-tools, NDK, …) — the shim never sees your keys and never talks to a relay.
+
+```html
+<script type="module">
+  import { ClaveConnect, openLink } from 'https://clave.casa/sdk/clave-connect-0.1.0.js';
+  // pin the version and the hash: integrity="sha384-4tldMcAb+vDq69JMujdUCNM0KiVVzHwog9FjCqOFfCx81ldwHvs9uTn5X/Y0pecz" crossorigin="anonymous"
+
+  const cc = new ClaveConnect({
+    // Called whenever a NEW attempt is needed. Persist the client keypair across attempts;
+    // only the secret is fresh each time.
+    mint: () => ({
+      clientPubkey,                 // your persisted client keypair's pubkey (64 hex)
+      secret: freshSecret(),        // e.g. 16 random hex chars
+      relays: myRelays,             // wss://relay.powr.build is merged in for you
+      perms: ['sign_event:1', 'get_public_key'],
+      name: 'Conduit',
+      url: 'https://sell.conduit.market',   // its domain is what Clave shows largest
+      image: 'https://sell.conduit.market/icon.png',
+    }),
+  });
+
+  // When the user comes back to the tab, confirm the session even if the connect ack was
+  // lost: send get_public_key with your session keypair. It never prompts for a paired
+  // client. On an answer, the session is live.
+  cc.onReturn(async (attempt) => {
+    const pubkey = await myNip46.getPublicKey();   // your transport, your call
+    if (pubkey) cc.established();
+  });
+
+  // First tap starts an attempt; later taps re-fire the SAME link (same secret) for ~10 min,
+  // so a user whose first approval didn't get acked just taps again — no error, no new prompt.
+  button.onclick = () => openLink(cc.retry());
+
+  // On an explicit denial from Clave (or your own timeout policy): cc.denied() — the next tap re-mints.
+</script>
+```
+
+What each piece is for:
+
+| Call | Does |
+|---|---|
+| `buildConnectURI(params)` | `nostrconnect://` URI with Clave's push-wake relay merged in; values encoded with `encodeURIComponent` (spaces → `%20`, never `+`) |
+| `universalLink(uri)` | wraps it as `https://clave.casa/connect/?uri=…`, encoded exactly once |
+| `openLink(link)` | navigates via a real same-tab `<a>` click — what iOS requires for a Universal Link to fire |
+| `cc.start()` / `cc.retry()` | mint a new attempt / re-fire the pending one (10-minute window, persisted in `sessionStorage`) |
+| `cc.onReturn(cb)` | fires once per return-to-foreground while an attempt is pending — send the resume probe here |
+| `cc.established()` / `cc.denied()` | end the attempt so the next tap mints a fresh secret |
+
+Treat an ack timeout as **retry, not error**: show "Tap Connect again" rather than a failure. The same-device handshake can lose the connect ack (the page's socket freezes seconds after Clave comes to the front); the resume probe recovers a session that was paired, and the re-fire recovers one whose ack never arrived — Clave answers a repeated connect for a pairing it already made without a second prompt.
+
+Versioned copies (`/sdk/clave-connect-<version>.js`) are immutable and CORS-enabled; `/sdk/clave-connect.js` is "latest". The SRI hash for each version is published alongside it (`.sri`).
+
 ## Recommended UX
 
 Show **both** affordances side-by-side:
