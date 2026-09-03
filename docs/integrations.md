@@ -98,6 +98,60 @@ const claveUrl = computed(
 </script>
 ```
 
+## The shim: `clave-connect.js`
+
+If you'd rather not hand-roll the wrapping and the iOS return leg, there's a small dependency-free ES module that does exactly the Clave-specific parts and nothing else. **You keep your own NIP-46 transport** (nostr-tools, NDK, …) — the shim never sees your keys and never talks to a relay.
+
+```html
+<script type="module">
+  import { ClaveConnect, openLink } from 'https://clave.casa/sdk/clave-connect-0.1.0.js';
+  // pin the version and the hash: integrity="sha384-4tldMcAb+vDq69JMujdUCNM0KiVVzHwog9FjCqOFfCx81ldwHvs9uTn5X/Y0pecz" crossorigin="anonymous"
+
+  const cc = new ClaveConnect({
+    // Called whenever a NEW attempt is needed. Persist the client keypair across attempts;
+    // only the secret is fresh each time.
+    mint: () => ({
+      clientPubkey,                 // your persisted client keypair's pubkey (64 hex)
+      secret: freshSecret(),        // e.g. 16 random hex chars
+      relays: myRelays,             // wss://relay.powr.build is merged in for you
+      perms: ['sign_event:1', 'get_public_key'],
+      name: 'Conduit',
+      url: 'https://sell.conduit.market',   // its domain is what Clave shows largest
+      image: 'https://sell.conduit.market/icon.png',
+    }),
+  });
+
+  // When the user comes back to the tab, confirm the session even if the connect ack was
+  // lost: send get_public_key with your session keypair. It never prompts for a paired
+  // client. On an answer, the session is live.
+  cc.onReturn(async (attempt) => {
+    const pubkey = await myNip46.getPublicKey();   // your transport, your call
+    if (pubkey) cc.established();
+  });
+
+  // First tap starts an attempt; later taps re-fire the SAME link (same secret) for ~10 min,
+  // so a user whose first approval didn't get acked just taps again — no error, no new prompt.
+  button.onclick = () => openLink(cc.retry());
+
+  // On an explicit denial from Clave (or your own timeout policy): cc.denied() — the next tap re-mints.
+</script>
+```
+
+What each piece is for:
+
+| Call | Does |
+|---|---|
+| `buildConnectURI(params)` | `nostrconnect://` URI with Clave's push-wake relay merged in; values encoded with `encodeURIComponent` (spaces → `%20`, never `+`) |
+| `universalLink(uri)` | wraps it as `https://clave.casa/connect/?uri=…`, encoded exactly once |
+| `openLink(link)` | navigates via a real same-tab `<a>` click — what iOS requires for a Universal Link to fire |
+| `cc.start()` / `cc.retry()` | mint a new attempt / re-fire the pending one (10-minute window, persisted in `sessionStorage`) |
+| `cc.onReturn(cb)` | fires once per return-to-foreground while an attempt is pending — send the resume probe here |
+| `cc.established()` / `cc.denied()` | end the attempt so the next tap mints a fresh secret |
+
+Treat an ack timeout as **retry, not error**: show "Tap Connect again" rather than a failure. The same-device handshake can lose the connect ack (the page's socket freezes seconds after Clave comes to the front); the resume probe recovers a session that was paired, and the re-fire recovers one whose ack never arrived — Clave answers a repeated connect for a pairing it already made without a second prompt.
+
+Versioned copies (`/sdk/clave-connect-<version>.js`) are immutable and CORS-enabled; `/sdk/clave-connect.js` is "latest". The SRI hash for each version is published alongside it (`.sri`).
+
 ## Recommended UX
 
 Show **both** affordances side-by-side:
@@ -129,13 +183,25 @@ In every case, your client's relay listener picks up the signer's ack the same w
 
 ## Brand
 
-There isn't an official "Connect with Clave" button asset yet — feel free to:
+The official "Connect with Clave" button lives at `https://clave.casa/brand/` (source: [`static/brand/`](../static/brand/)). It's in the same idiom as the Sign in with Google / Apple buttons, so it lines up beside them.
 
-- Use the Clave wordmark + your app's button styling
-- Use the iOS app icon (when distributed via App Store, available in [Clave's repo](https://github.com/DocNR/clave))
-- Build your own using Clave's brand colors (Violet `#7A8CFF` → `#A14AFF` gradient, accent `#592EFF`)
+Include the stylesheet once — it's self-contained, the Clave mark is embedded — and put the classes on the `<a>` from the snippets above:
 
-A formal brand asset package will land in this repo at `static/brand/` once Clave hits the App Store; until then, copy what works.
+```html
+<link rel="stylesheet" href="https://clave.casa/brand/connect-with-clave.css">
+
+<a class="clave-connect clave-connect--light" href={claveUrl} target="_self">
+  <span class="clave-connect__mark" aria-hidden="true"></span>
+  Connect with Clave
+</a>
+```
+
+- **Variants:** `clave-connect--light` (light UIs) and `clave-connect--dark` (dark UIs) are the recommended defaults; `clave-connect--brand` (Clave Violet gradient) when the button is the page's one primary action; add `clave-connect--block` for full-width.
+- **Beside Google/Apple:** default height is 44px (Apple's); set `--clave-connect-height: 40px` to match Google's.
+- **Static images** (email, design tools): `connect-with-clave-{light,dark,brand}.svg`, 200×44, self-contained.
+- Keep the label exactly "Connect with Clave" and the mark as the circle it ships as.
+
+Full notes, knobs, and do/don't in [`static/brand/README.md`](../static/brand/README.md).
 
 ## Constraints to keep in mind
 
@@ -166,6 +232,6 @@ Filing issues / PRs against [DocNR/clave-casa](https://github.com/DocNR/clave-ca
 
 - Clients shipping Universal Link support (we'll add a "compatible clients" list to the README)
 - Edge cases that break (e.g. specific browsers / webviews / iOS versions where the fallback page misbehaves)
-- Brand asset requests (button SVGs, icon variants, sizing recommendations)
+- Brand asset requests beyond what's in `static/brand/` (icon variants, other sizes, other formats)
 
 The goal is to make `nostrconnect://` scheme-squatting a non-issue across the Nostr ecosystem. Every client that adopts Universal Links makes the bug less visible to users.
