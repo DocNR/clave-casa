@@ -106,8 +106,8 @@ If you'd rather not hand-roll the wrapping and the iOS return leg, there's a sma
 
 ```html
 <script type="module">
-  import { ClaveConnect, openLink } from 'https://clave.casa/sdk/clave-connect-0.1.0.js';
-  // pin the version and the hash: integrity="sha384-4tldMcAb+vDq69JMujdUCNM0KiVVzHwog9FjCqOFfCx81ldwHvs9uTn5X/Y0pecz" crossorigin="anonymous"
+  import { ClaveConnect, openLink } from 'https://clave.casa/sdk/clave-connect-0.2.0.js';
+  // pin the version and the hash: integrity="sha384-qMIsXKObQr4vKbEKax1xx35EJyWyQDDXIccR1M0R51iXATG+wToJZYnalByf3TUF" crossorigin="anonymous"
 
   const cc = new ClaveConnect({
     // Called whenever a NEW attempt is needed. Persist the client keypair across attempts;
@@ -120,6 +120,8 @@ If you'd rather not hand-roll the wrapping and the iOS return leg, there's a sma
       name: 'Conduit',
       url: 'https://sell.conduit.market',   // its domain is what Clave shows largest
       image: 'https://sell.conduit.market/icon.png',
+      // Optional return leg — same host as `url`, carrying only a nonce you minted (see "The return leg").
+      callback: 'https://sell.conduit.market/clave/return?state=' + freshNonce(),
     }),
   });
 
@@ -143,7 +145,7 @@ What each piece is for:
 
 | Call | Does |
 |---|---|
-| `buildConnectURI(params)` | `nostrconnect://` URI with Clave's push-wake relay merged in; values encoded with `encodeURIComponent` (spaces → `%20`, never `+`) |
+| `buildConnectURI(params)` | `nostrconnect://` URI with Clave's push-wake relay merged in; values encoded with `encodeURIComponent` (spaces → `%20`, never `+`); throws on a `callback` Clave would drop |
 | `universalLink(uri)` | wraps it as `https://clave.casa/connect/?uri=…`, encoded exactly once |
 | `openLink(link)` | navigates via a real same-tab `<a>` click — what iOS requires for a Universal Link to fire |
 | `cc.start()` / `cc.retry()` | mint a new attempt / re-fire the pending one (10-minute window, persisted in `sessionStorage`) |
@@ -153,6 +155,24 @@ What each piece is for:
 Treat an ack timeout as **retry, not error**: show "Tap Connect again" rather than a failure. The same-device handshake can lose the connect ack (the page's socket freezes seconds after Clave comes to the front); the resume probe recovers a session that was paired, and the re-fire recovers one whose ack never arrived — Clave answers a repeated connect for a pairing it already made without a second prompt.
 
 Versioned copies (`/sdk/clave-connect-<version>.js`) are immutable and CORS-enabled; `/sdk/clave-connect.js` is "latest". The SRI hash for each version is published alongside it (`.sri`).
+
+### The return leg (`callback=`)
+
+Clave reads an optional `callback=` on the nostrconnect URI (Sign in with Clave, Phase 2 — [DocNR/clave#98](https://github.com/DocNR/clave/pull/98); check that PR's status before relying on it in production). What it does with it depends on the scheme:
+
+| Your `callback` | After the user approves |
+|---|---|
+| `yourapp://…` (native iOS app) | Clave **opens it** — your app comes to the front with the URL. |
+| `https://…` (website or installed web app) | Clave **names it, never opens it**: the sheet reads "Afterwards, return to *sell.conduit.market*". iOS would open an https URL in a *new* Safari tab — not the tab, or the installed web app, holding the pending pairing — so the user taps the "◀ Safari" chip instead, which lands on the exact tab or web-app window they left. `cc.onReturn` fires there. |
+
+Rules — the shim enforces the ones it can and throws, because Clave drops a rejected callback *silently* (not shown, not opened):
+
+- **Carry only an opaque nonce you minted.** Never the secret, never the signer pubkey, nothing you would mind in browser history or delivered to another app: a custom scheme is squattable by any installed app. A hijacked callback must cost the user an app switch, not a session.
+- **An https callback must have exactly the same host as `url`** — lowercased, one leading `www.` aside, no other normalisation. `attacker.github.io` can never call back as `github.io`, and two tenants of one shared suffix (`*.pages.dev`, `*.vercel.app`) can never redirect to each other. No `url` → no https callback.
+- **Absolute URL, no whitespace.** A custom scheme passes as given; schemes iOS itself acts on (`tel:`, `sms:`, `mailto:`, `facetime:`, `itms*`, `shortcuts:`, Settings) and Clave's own (`nostrconnect:`, `clave:`) are refused on the phone.
+- **Never on denial, never from the lock screen.** The return leg only follows a foreground approval, and only after the connect ack is on the wire.
+
+Treat the return as a *foreground signal*, not a result: the pairing completes over the relay exactly as before. On return, run the resume probe.
 
 ## Recommended UX
 
@@ -181,7 +201,7 @@ The QR + copy button cover any signer; the "Connect with Clave" button is the on
 | No Clave, has another signer | Safari opens our fallback page; user sees QR + copy button to feed into their existing signer. |
 | No signer at all | Safari opens our fallback page; install links for Clave / Amber / nsec.app are surfaced. |
 
-In every case, your client's relay listener picks up the signer's ack the same way as before. The Universal Link is purely an additional transport for the URI, not a replacement for your existing handshake logic.
+In every case, your client's relay listener picks up the signer's ack the same way as before. The Universal Link is purely an additional transport for the URI, not a replacement for your existing handshake logic. If you sent a `callback`, the approval sheet also names where to go back to — see [The return leg](#the-return-leg-callback).
 
 ## Brand
 
@@ -226,6 +246,7 @@ The Universal Link integration is **only** needed for the nostrconnect direction
 3. **On the same device after running `sudo swcutil reset`**, tap again — first tap may trigger an AASA fetch + retry. Second tap should be instant.
 4. **On a device without Clave installed**, tap the link. Confirm Safari opens clave.casa with the inbound-URI fallback page, QR rendered, install panel visible.
 5. **End-to-end smoke test**: with Clave installed, tap → approve in Clave → confirm your client's relay listener received the ack and the session is established.
+6. **With `callback` set**: the approval sheet reads "Afterwards, return to *your host*"; after Approve, the "◀ Safari" chip returns to the original tab (or your installed web app), `cc.onReturn` fires there, and the resume probe answers.
 
 Universal Links don't fire from in-app webviews of some apps (Twitter's in-app browser, Slack's preview, etc.) — that's an iOS quirk you can't fix client-side. Users who hit those will fall through to Safari, and our fallback page covers that case cleanly.
 
