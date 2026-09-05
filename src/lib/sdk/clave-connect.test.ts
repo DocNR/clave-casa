@@ -1,4 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { createHash } from 'node:crypto';
 // The shipped file IS the unit under test — one source of truth (typed via its JSDoc).
 import { buildConnectURI, universalLink, ClaveConnect, CLAVE_RELAY, PENDING_WINDOW_MS } from '../../../static/sdk/clave-connect.js';
 
@@ -42,6 +45,77 @@ describe('buildConnectURI', () => {
 	it('rejects a malformed client pubkey or empty secret', () => {
 		expect(() => buildConnectURI({ clientPubkey: 'nope', secret: SECRET, relays: [CLAVE_RELAY] })).toThrow();
 		expect(() => buildConnectURI({ clientPubkey: PK, secret: '', relays: [CLAVE_RELAY] })).toThrow();
+	});
+});
+
+describe('buildConnectURI callback= (the return leg)', () => {
+	const base = { clientPubkey: PK, secret: SECRET, relays: [CLAVE_RELAY], url: 'https://sell.conduit.market' };
+	const param = (uri: string, name: string) => new URL(uri.replace('nostrconnect://', 'https://')).searchParams.get(name);
+
+	it('omits callback= when none is given', () => {
+		expect(buildConnectURI(base)).not.toContain('callback=');
+	});
+
+	it('carries an https callback on the same host as url, percent-encoded once', () => {
+		const uri = buildConnectURI({ ...base, callback: 'https://sell.conduit.market/clave/return?state=abc123' });
+		expect(uri).toContain('callback=https%3A%2F%2Fsell.conduit.market%2Fclave%2Freturn%3Fstate%3Dabc123');
+		expect(param(uri, 'callback')).toBe('https://sell.conduit.market/clave/return?state=abc123');
+	});
+
+	it('treats www. as the same host on either side, like Clave does', () => {
+		expect(() => buildConnectURI({ ...base, callback: 'https://www.sell.conduit.market/r' })).not.toThrow();
+		expect(() => buildConnectURI({ ...base, url: 'https://www.sell.conduit.market', callback: 'https://sell.conduit.market/r' })).not.toThrow();
+	});
+
+	it('carries a custom-scheme callback without needing url', () => {
+		const { url: _url, ...noUrl } = base;
+		const uri = buildConnectURI({ ...noUrl, callback: 'conduit://clave-return?state=abc123' });
+		expect(param(uri, 'callback')).toBe('conduit://clave-return?state=abc123');
+	});
+
+	it('refuses an https callback whose host is not exactly the url host (Clave would drop it silently)', () => {
+		expect(() => buildConnectURI({ ...base, callback: 'https://evil.example/return' })).toThrow(/host/);
+		expect(() => buildConnectURI({ ...base, callback: 'https://api.sell.conduit.market/return' })).toThrow(/host/);
+		expect(() => buildConnectURI({ ...base, callback: 'https://conduit.market/return' })).toThrow(/host/);
+		const { url: _url, ...noUrl } = base;
+		expect(() => buildConnectURI({ ...noUrl, callback: 'https://sell.conduit.market/return' })).toThrow(/url/);
+	});
+
+	it('refuses a callback that carries the secret', () => {
+		expect(() => buildConnectURI({ ...base, callback: `https://sell.conduit.market/return?s=${SECRET}` })).toThrow(/secret/);
+		expect(() => buildConnectURI({ ...base, callback: `conduit://return?s=${SECRET}` })).toThrow(/secret/);
+	});
+
+	it('refuses a relative, schemeless or whitespace-bearing callback', () => {
+		expect(() => buildConnectURI({ ...base, callback: '/return' })).toThrow(/absolute/);
+		expect(() => buildConnectURI({ ...base, callback: 'sell.conduit.market/return' })).toThrow(/absolute/);
+		expect(() => buildConnectURI({ ...base, callback: 'https://sell.conduit.market/re turn' })).toThrow(/whitespace/);
+		expect(() => buildConnectURI({ ...base, callback: 'https://sell.conduit.market/return\n' })).toThrow(/whitespace/);
+	});
+});
+
+describe('published copies', () => {
+	// The versioned file is what partners pin (immutable + SRI); "latest" must be
+	// the same bytes, and the .sri beside it must be the hash of those bytes.
+	const VERSION = '0.2.0';
+	const sdk = (f: string) => readFileSync(resolve(__dirname, '../../../static/sdk', f));
+	const sri = (buf: Buffer) => 'sha384-' + createHash('sha384').update(buf).digest('base64');
+
+	it(`clave-connect-${VERSION}.js is byte-identical to clave-connect.js`, () => {
+		expect(sdk(`clave-connect-${VERSION}.js`).equals(sdk('clave-connect.js'))).toBe(true);
+	});
+
+	it(`clave-connect-${VERSION}.sri is the sha384 of clave-connect-${VERSION}.js`, () => {
+		expect(sdk(`clave-connect-${VERSION}.sri`).toString().trim()).toBe(sri(sdk(`clave-connect-${VERSION}.js`)));
+	});
+
+	it('the header names the same version', () => {
+		expect(sdk('clave-connect.js').toString().split('\n')[1]).toContain(`v${VERSION}`);
+	});
+
+	it('0.1.0 is untouched', () => {
+		expect(sdk('clave-connect-0.1.0.sri').toString().trim()).toBe(sri(sdk('clave-connect-0.1.0.js')));
+		expect(sri(sdk('clave-connect-0.1.0.js'))).toBe('sha384-4tldMcAb+vDq69JMujdUCNM0KiVVzHwog9FjCqOFfCx81ldwHvs9uTn5X/Y0pecz');
 	});
 });
 

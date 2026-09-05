@@ -1,5 +1,5 @@
 /**
- * clave-connect.js — the "Connect with Clave" handoff shim. v0.1.0
+ * clave-connect.js — the "Connect with Clave" handoff shim. v0.2.0
  *
  * Deliberately thin. Your app keeps its own NIP-46 transport (nostr-tools,
  * NDK, whatever you already use). This file only does the parts that are
@@ -15,7 +15,10 @@
  *      prompt — and re-mints only after denial, expiry, or establishment;
  *   4. tell you when the user comes back to the page so you can send the
  *      get_public_key resume probe (prompt-free for paired clients) and
- *      confirm the session even if the connect ack was lost.
+ *      confirm the session even if the connect ack was lost;
+ *   5. carry your optional `callback=` return URL, checked against the same
+ *      rules Clave applies so a rejected one fails here, loudly, instead of
+ *      being dropped silently on the phone.
  *
  * Zero dependencies. ES module. Works in any modern browser; the attempt
  * lifecycle is also usable in tests with injected `now`, `storage`, `document`.
@@ -40,6 +43,7 @@ const STORAGE_KEY = 'clave-connect.pending';
  * @property {string=} name         your app's display name (shown, marked unverified)
  * @property {string=} url          your app's https URL — its domain is what Clave shows largest
  * @property {string=} image        your app's icon URL
+ * @property {string=} callback     your return URL, carrying ONLY an opaque nonce you minted (see validatedCallback)
  */
 
 /**
@@ -67,8 +71,71 @@ export function buildConnectURI(p) {
   if (p.name) kv.push(['name', p.name]);
   if (p.url) kv.push(['url', p.url]);
   if (p.image) kv.push(['image', p.image]);
+  if (p.callback) kv.push(['callback', validatedCallback(p.callback, p.secret, p.url)]);
   const query = kv.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
   return `nostrconnect://${p.clientPubkey.toLowerCase()}?${query}`;
+}
+
+/**
+ * The `callback=` return leg (Sign in with Clave, Phase 2). After a foreground
+ * approval Clave OPENS a custom-scheme callback (native apps come back to the
+ * front) and only NAMES an https one — "Afterwards, return to <host>" —
+ * because iOS would open it in a new Safari tab, not the tab or installed web
+ * app holding the pending pairing; the user taps the "◀ Safari" chip instead.
+ *
+ * Clave's rules, mirrored here so a partner finds out in development rather
+ * than from a sheet that never mentions the return: an https callback must
+ * have exactly the same host as `url` (lowercased, one leading "www." aside;
+ * no registrable-domain collapse, so attacker.github.io ≠ github.io); a
+ * custom scheme is taken as given; a callback Clave refuses is dropped
+ * silently, not shown.
+ *
+ * Carry ONLY an opaque nonce you minted — never the secret, never the signer
+ * pubkey. A custom scheme is squattable by any installed app and an https
+ * URL lands in browser history, so a hijacked callback must cost an app
+ * switch, not a session.
+ * @param {string} callback
+ * @param {string} secret
+ * @param {string=} url
+ * @returns {string}
+ */
+function validatedCallback(callback, secret, url) {
+  if (typeof callback !== 'string' || /\s/.test(callback)) {
+    throw new Error('clave-connect: callback must be a string without whitespace');
+  }
+  let parsed;
+  try {
+    parsed = new URL(callback);
+  } catch {
+    throw new Error('clave-connect: callback must be an absolute URL (https://… or yourscheme://…)');
+  }
+  if (secret && callback.includes(secret)) {
+    throw new Error('clave-connect: callback must not carry the secret — use an opaque nonce');
+  }
+  if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+    if (!url) throw new Error('clave-connect: an https callback needs url — Clave binds the callback to its host');
+    const a = displayHost(callback);
+    const b = displayHost(url);
+    if (!a || !b || a !== b) {
+      throw new Error(`clave-connect: callback host must equal the url host exactly (${a} vs ${b}) — Clave drops a mismatch`);
+    }
+  }
+  return callback;
+}
+
+/**
+ * A host the way Clave compares it: lowercase, trailing dot and one leading
+ * "www." removed, every other label kept.
+ * @param {string} u
+ * @returns {string | null}
+ */
+function displayHost(u) {
+  try {
+    const h = new URL(u).hostname.toLowerCase().replace(/\.$/, '');
+    return h.startsWith('www.') ? h.slice(4) : h;
+  } catch {
+    return null;
+  }
 }
 
 /**
